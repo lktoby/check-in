@@ -1,4 +1,22 @@
--- 連絡先（メール通知先）テーブルの作成
+-- 1. users テーブルの作成
+CREATE TABLE IF NOT EXISTS users (
+  line_user_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  roles TEXT[] DEFAULT '{senior}',
+  phone_number TEXT,
+  region TEXT,
+  age INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- users の RLS 有効化と開発用ポリシー
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all access for users during dev"
+ON users FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 2. contacts テーブルの作成
 CREATE TABLE IF NOT EXISTS contacts (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   senior_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
@@ -10,12 +28,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- RLS（行レベルセキュリティ）の有効化
+-- contacts の RLS 有効化と開発用ポリシー
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 
--- 開発用アクセス権限ポリシー
 CREATE POLICY "Allow all access for contacts during dev"
-ON contacts
-FOR ALL
-USING (true)
-WITH CHECK (true);
+ON contacts FOR ALL USING (true) WITH CHECK (true);
