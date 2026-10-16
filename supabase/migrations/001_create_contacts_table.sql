@@ -1,35 +1,49 @@
--- 1. users テーブルの作成
+-- 1. users テーブル（高齢者・保護者共通）
 CREATE TABLE IF NOT EXISTS users (
   line_user_id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   roles TEXT[] DEFAULT '{senior}',
-  phone_number TEXT,
-  region TEXT,
-  age INTEGER,
+  send_notification_days INT DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- users の RLS 有効化と開発用ポリシー
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all access for users during dev"
-ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access for users during dev" ON users FOR ALL USING (true) WITH CHECK (true);
 
 
--- 2. contacts テーブルの作成
-CREATE TABLE IF NOT EXISTS contacts (
+-- 2. relationships テーブル（保護者との紐付け）
+CREATE TABLE IF NOT EXISTS relationships (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   senior_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  relationship TEXT,
-  is_primary BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
+  guardian_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
+  relationship_type TEXT DEFAULT '家族',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(senior_id, guardian_id)
+);
+
+ALTER TABLE relationships ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access for relationships during dev" ON relationships FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 3. pair_codes テーブル（アプリ内招待コード）
+CREATE TABLE IF NOT EXISTS pair_codes (
+  code TEXT PRIMARY KEY,
+  senior_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- contacts の RLS 有効化と開発用ポリシー
-ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pair_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access for pair_codes during dev" ON pair_codes FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow all access for contacts during dev"
-ON contacts FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. check_ins テーブル（チェックイン履歴）
+CREATE TABLE IF NOT EXISTS check_ins (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  line_user_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
+  display_name TEXT,
+  checked_in_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access for check_ins during dev" ON check_ins FOR ALL USING (true) WITH CHECK (true);
