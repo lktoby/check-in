@@ -1,8 +1,8 @@
-import * as bootstrap from "bootstrap";
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
 import "./App.css";
+import "bootstrap/dist/css/bootstrap.css";
 
 function App() {
   const [message, setMessage] = useState("");
