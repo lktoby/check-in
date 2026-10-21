@@ -9,6 +9,7 @@
   "dependencies": {
     "@line/liff": "2.31.2",
     "@supabase/supabase-js": "^2.117.2",
+    "bootstrap": "^6.0.0-alpha.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "vercel": "^62.7.0"

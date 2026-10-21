@@ -1,3 +1,4 @@
+import * as bootstrap from "bootstrap";
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
@@ -62,7 +63,7 @@ function App() {
       {error && <p><code>{error}</code></p>}
 
       {profile && (
-        <button onClick={checkIn}>
+        <button onClick={checkIn} className="btn btn-primary">
           Check in
         </button>
       )}
