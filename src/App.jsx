@@ -23,11 +23,32 @@ function App() {
 
         const lineProfile = await liff.getProfile();
 
+        setMessage("Saving your profile...");
+
+        // Update only the LINE identity fields; leave later registration fields intact.
+        const { data: savedUser, error: userError } = await supabase
+          .from("users")
+          .upsert(
+            {
+              line_user_id: lineProfile.userId,
+              name: lineProfile.displayName,
+            },
+            { onConflict: "line_user_id" }
+          )
+          .select("line_user_id")
+          .single();
+
+        if (userError) throw userError;
+        if (savedUser?.line_user_id !== lineProfile.userId) {
+          throw new Error("Supabase did not return the saved user row.");
+        }
+
         setProfile(lineProfile);
-        setMessage(`Welcome, ${lineProfile.displayName}`);
+        setMessage(`Profile saved to Supabase. Welcome, ${lineProfile.displayName}`);
       } catch (e) {
         setMessage("Initialization failed.");
-        setError(String(e));
+        console.error("Failed to initialize LINE or save the Supabase profile:", e);
+        setError(e?.message || String(e));
       }
     }
 
@@ -40,19 +61,41 @@ function App() {
       return;
     }
 
-    const { error: insertError } = await supabase
-      .from("check_ins")
-      .insert({
+    setError("");
+    setMessage("Processing check-in...");
+
+    try {
+      // Ensure the referenced user row exists in the same database before inserting.
+      const { data: savedUser, error: userError } = await supabase
+        .from("users")
+        .upsert(
+          {
+            line_user_id: profile.userId,
+            name: profile.displayName,
+          },
+          { onConflict: "line_user_id" }
+        )
+        .select("line_user_id")
+        .single();
+
+      if (userError) throw userError;
+      if (savedUser?.line_user_id !== profile.userId) {
+        throw new Error("Could not confirm the user row before check-in.");
+      }
+
+      // check_ins テーブルに新しいチェックイン履歴を記録
+      const { error: insertError } = await supabase.from("check_ins").insert({
         line_user_id: profile.userId,
         display_name: profile.displayName,
       });
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
-    }
+      if (insertError) throw insertError;
 
-    setMessage("Check-in completed.");
+      setMessage("Check-in completed successfully!");
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Failed to check in.");
+    }
   }
 
   return (
