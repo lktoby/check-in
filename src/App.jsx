@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
 import "./App.css";
+import { WordMatchGame } from "./games/wordmatch";
 
 function App() {
   const [message, setMessage] = useState("");
@@ -66,6 +67,7 @@ function App() {
           Check in
         </button>
       )}
+      <WordMatchGame />
     </div>
   );
 }
