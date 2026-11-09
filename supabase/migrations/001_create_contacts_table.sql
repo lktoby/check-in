@@ -39,10 +39,10 @@ CREATE POLICY "Allow all access for pair_codes during dev" ON pair_codes FOR ALL
 
 -- 4. check_ins テーブル（チェックイン履歴）
 CREATE TABLE IF NOT EXISTS check_ins (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   line_user_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
   display_name TEXT,
-  checked_in_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
