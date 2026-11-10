@@ -1,0 +1,487 @@
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Noto+Serif+JP:wght@400;500;600;700&display=swap");
+
+:root {
+  --pink: #f7e9e8;
+  --pink-light: #f3e9e8;
+  --green: #607d65;
+  --green-dark: #48654f;
+  --paper: #fbe9e3;
+  --line: #71866f;
+  --text: #506d57;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.registration-page {
+  min-height: 100vh;
+  padding: 48px 20px;
+  background: var(--pink);
+  color: var(--text);
+  font-family: "DM Sans", "Noto Serif JP", serif;
+}
+
+.registration-container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 44px clamp(20px, 6vw, 64px);
+  background: var(--pink);
+  border: 1px solid rgba(72, 101, 79, 0.7);
+  box-shadow: 0 0 0 7px rgba(248, 217, 211, 0.28);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.registration-title {
+  margin: 0;
+  color: var(--green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 6vw, 54px);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 1.2;
+}
+
+
+.registration-subtitle {
+  margin: 0;
+  color: var(--green);
+  font-family: "Noto Serif JP", serif;
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+
+
+.flourish {
+  margin: 18px 0 24px;
+  color: var(--green);
+  font-size: 19px;
+  letter-spacing: 0.2em;
+}
+
+.registration-description {
+  margin: 0 auto 30px;
+  max-width: 440px;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.registration-section {
+  margin: 25px 0;
+  padding: 24px 22px;
+  text-align: left;
+}
+
+.hand-drawn {
+  position: relative;
+  border: 1.5px solid var(--line);
+  border-radius: 17px 12px 20px 13px / 13px 19px 12px 18px;
+  transform: rotate(-0.25deg);
+}
+
+.hand-drawn::before {
+  position: absolute;
+  inset: 4px -3px -4px 3px;
+  border: 1px solid rgba(96, 125, 101, 0.6);
+  border-radius: 13px 19px 11px 17px / 19px 12px 18px 11px;
+  content: "";
+  pointer-events: none;
+  transform: rotate(0.55deg);
+}
+
+.registration-section h2 {
+  margin: 0 0 12px;
+  color: var(--green-dark);
+  font-family: "Noto Serif JP", serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.registration-section > p {
+  margin: 0 0 17px;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.registration-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.registration-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid rgba(96, 125, 101, 0.7);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.registration-choice:has(input:checked) {
+  background: rgba(253, 235, 231, 0.8);
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+.registration-choice input,
+.day-option input {
+  accent-color: var(--green);
+}
+
+.day-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.day-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px 13px 9px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.day-option.selected {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+.registration-field {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 15px 0;
+  font-size: 13px;
+}
+
+.registration-field select,
+.registration-field input,
+.code-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(96, 125, 101, 0.75);
+  border-radius: 10px 13px 9px 12px;
+  outline: none;
+  background: rgba(251, 233, 227, 0.4);
+  color: var(--text);
+  font: inherit;
+}
+
+.registration-field select:focus,
+.registration-field input:focus,
+.code-row input:focus {
+  box-shadow: 0 0 0 3px rgba(96, 125, 101, 0.16);
+}
+
+.registration-field input::placeholder {
+  color: #829383;
+}
+
+.secondary-button,
+.copy-button,
+.primary-button {
+  border: 1px solid var(--green);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.secondary-button {
+  display: block;
+  margin: 18px auto;
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green-dark);
+}
+
+.secondary-button:hover {
+  background: var(--paper);
+}
+
+.code-card {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 13px;
+  background: rgba(233, 213, 209, 0.7);
+}
+
+.code-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.code-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.code-row input {
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.copy-button {
+  flex-shrink: 0;
+  padding: 10px 15px;
+  border-radius: 9px;
+  background: var(--green);
+  color: white;
+}
+
+.copy-button:hover,
+.primary-button:hover {
+  background: var(--green-dark);
+  transform: translateY(-1px);
+}
+
+.primary-button {
+  display: block;
+  width: min(100%, 320px);
+  min-height: 48px;
+  margin: 32px auto 0;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: var(--green);
+  color: white;
+  letter-spacing: 0.04em;
+}
+
+.registration-note {
+  margin: 12px 0 0;
+  color: #627b66;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.footer-flower {
+  margin-top: 28px;
+  color: var(--green);
+  font-size: 32px;
+}
+
+@media (max-width: 520px) {
+  .registration-page {
+    padding: 18px 12px;
+  }
+
+  .registration-container {
+    padding: 32px 16px;
+  }
+
+  .registration-section {
+    padding: 20px 15px;
+  }
+
+  .registration-section h2 {
+    font-size: 14px;
+  }
+
+  .registration-section > p {
+    font-size: 12px;
+  }
+
+  .registration-field {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .day-options {
+    gap: 6px;
+  }
+
+  .day-option {
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+  }
+
+  .registration-choice {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .code-card {
+    padding: 12px;
+  }
+
+  .copy-button {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+
+
+/* おしゃれな明朝体 */
+.registration-container,
+.registration-container button,
+.registration-container input,
+.registration-container select {
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  color: #55745d;
+}
+
+/* 最初の画面のタイトル */
+.registration-container h1 {
+  color: #55745d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* 登録者を選ぶボタン */
+.registration-option {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  margin: 14px auto;
+  padding: 18px 16px;
+  border: 1px solid #66836a;
+  border-radius: 50px;
+  background: transparent;
+  color: #55745d;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.registration-option:hover {
+  background: #607d65;
+  color: #fff;
+}
+
+/* 1・2・3日後を大きく、デザイン性のある数字に */
+.day-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.day-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 105px;
+  padding: 12px 5px;
+  border: 1px solid #71866f;
+  border-radius: 18px 12px 20px 13px;
+  background: rgba(255, 235, 228, 0.25);
+  color: #55745d;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.day-option span {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+}
+
+.day-option span::first-letter {
+  font-size: 40px;
+}
+
+.day-option input {
+  margin: 0 0 8px;
+  accent-color: #55745d;
+}
+
+.day-option.selected {
+  background: #607d65;
+  color: #fff;
+  transform: translateY(-3px);
+}
+
+.day-option.selected input {
+  accent-color: #fff;
+}
+
+@media (max-width: 520px) {
+  .day-option {
+    min-height: 90px;
+  }
+}
+
+
+/* ボタンの文字を白くして、はっきり見えるようにする */
+.registration-container .copy-button {
+  background-color: #48654f;
+  color: #ffffff;
+  border-color: #48654f;
+  font-weight: 600;
+}
+
+/* 登録内容を確認するボタン */
+.registration-container .primary-button {
+  background-color: #48654f;
+  color: #ffffff;
+  border-color: #48654f;
+  font-weight: 600;
+}
+
+/* マウスを乗せたときも白文字をキープ */
+.registration-container .copy-button:hover,
+.registration-container .primary-button:hover {
+  background-color: #354e3b;
+  color: #ffffff;
+}
+
+/* コピー済みのときも文字を読みやすく */
+.registration-container .copy-button:focus,
+.registration-container .primary-button:focus {
+  color: #ffffff;
+}
+
+
+/* 登録者も、選択したら濃い緑＋白文字にする */
+.registration-container .registration-choice:has(input[type="radio"]:checked) {
+  background-color: #607d65;
+  color: #ffffff;
+  border-color: #607d65;
+  box-shadow: inset 0 0 0 1px #607d65;
+}
+
+/* 選択中のラジオボタンも白く見えるように */
+.registration-container .registration-choice input[type="radio"] {
+  accent-color: #607d65;
+}
+
+.registration-container .registration-choice:has(input[type="radio"]:checked) input[type="radio"] {
+  accent-color: #ffffff;
+}
+
+/* 選択中の文字色を確実に白にする */
+.registration-container .registration-choice:has(input[type="radio"]:checked) span {
+  color: #ffffff;
+}
