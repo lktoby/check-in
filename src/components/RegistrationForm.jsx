@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "./RegistrationForm.css";
+import liff from "@line/liff";
 
 const prefectures = [
   "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
@@ -82,8 +83,7 @@ function RegistrationForm({ profile }) {
     setCity("");
   }
 
-  // 仮の連携用URLを発行する
-  // API接続後に、本物のURLを発行する処理へ変更する
+ // Supabaseに招待コードを保存し、連携用URLを発行する
  async function generateCode() {
   if (!profile?.userId) {
     alert("LINEのユーザー情報を取得できませんでした。");
@@ -154,18 +154,39 @@ function RegistrationForm({ profile }) {
     }
   }
 
-  // LINEの共有画面を開く
-  function shareToLine() {
+  
+
+  // LINEの友だちを選んで招待URLを送る
+  async function shareToLine() {
     if (!code) return;
 
-    const shareUrl =
-      "https://line.me/R/share?text=" +
-      encodeURIComponent(
-        `見守りアプリの連携はこちらから：${code}`
-      );
+    try {
+      // シェアターゲットピッカーが使えるか確認
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        alert(
+          "LINEの共有機能を利用できません。LINEアプリ内から開き直してください。"
+        );
+        return;
+      }
 
-    window.open(shareUrl, "_blank", "noopener,noreferrer");
+      // 送信先を1人選んで招待URLを送信
+      await liff.shareTargetPicker(
+        [
+          {
+            type: "text",
+            text: `見守りアプリの連携はこちらから：\n${code}`,
+          },
+        ],
+        {
+          isMultiple: false,
+        }
+      );
+    } catch (error) {
+      console.error("LINE共有エラー:", error);
+      alert("LINEでの共有に失敗しました。もう一度お試しください。");
+    }
   }
+
 
   async function handleSubmit(event) {
    event.preventDefault();
@@ -422,9 +443,7 @@ function RegistrationForm({ profile }) {
               </div>
             )}
 
-            <p className="registration-note">
-              ※現在は仮のURLです。実際の連携機能はまだ接続されていません。
-            </p>
+            
           </section>
 
           <button type="submit" className="primary-button">
