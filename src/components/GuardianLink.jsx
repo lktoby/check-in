@@ -89,6 +89,7 @@ function GuardianLink() {
     initialize();
   }, [linkToken]);
 
+ 
   // 連携を承認する
   async function handleConfirm() {
     if (!profile || !inviter) return;
@@ -97,22 +98,25 @@ function GuardianLink() {
     setError("");
 
     try {
-      // 承認する人がusersに登録済みか確認
-      const { data: recipient, error: recipientError } = await supabase
+      // 招待された側の役割を決める
+      const recipientRole =
+        inviter.role === "senior" ? "guardian" : "senior";
+
+      // 招待された側のLINE情報をusersに登録
+      const { error: recipientError } = await supabase
         .from("users")
-        .select("line_user_id")
-        .eq("line_user_id", profile.userId)
-        .maybeSingle();
+        .upsert(
+          {
+            line_user_id: profile.userId,
+            name: profile.displayName,
+            roles: [recipientRole],
+          },
+          { onConflict: "line_user_id", ignoreDuplicates: true }
+        );
 
       if (recipientError) throw recipientError;
 
-      if (!recipient) {
-        throw new Error(
-          "先に見守り登録フォームから登録してください。"
-        );
-      }
-
-      // 招待した人の役割に応じてIDを振り分ける
+      // 本人と保護者のIDを振り分ける
       const seniorId =
         inviter.role === "senior"
           ? inviter.line_user_id
@@ -135,7 +139,6 @@ function GuardianLink() {
       if (insertError) throw insertError;
 
       setConfirmed(true);
-
     } catch (e) {
       console.error(e);
       setError(e.message || "連携に失敗しました。");
@@ -143,6 +146,7 @@ function GuardianLink() {
       setSaving(false);
     }
   }
+
 
   // 読み込み中
   if (loading) {

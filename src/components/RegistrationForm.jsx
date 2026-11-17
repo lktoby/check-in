@@ -137,7 +137,7 @@ function RegistrationForm({ profile }) {
 
    // 招待URLを表示
    const inviteUrl =
-     `${window.location.origin}/guardian-preview.html?link=${newCode}`;
+      `https://liff.line.me/${import.meta.env.VITE_LIFF_ID}?link=${newCode}`;
 
    setCode(inviteUrl);
    setCopied(false);
