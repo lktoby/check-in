@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 import "./RegistrationForm.css";
 
 const prefectures = [
@@ -13,7 +14,7 @@ const prefectures = [
   "宮崎県", "鹿児島県", "沖縄県"
 ];
 
-function RegistrationForm() {
+function RegistrationForm({ profile }) {
   const [registrant, setRegistrant] = useState("senior");
   const [notificationDays, setNotificationDays] = useState("2");
   const [prefecture, setPrefecture] = useState("");
@@ -83,14 +84,65 @@ function RegistrationForm() {
 
   // 仮の連携用URLを発行する
   // API接続後に、本物のURLを発行する処理へ変更する
-  function generateCode() {
-    const demoUrl =
-      `${window.location.origin}/guardian-preview.html?link=` +
-      Math.random().toString(36).slice(2, 10);
-
-    setCode(demoUrl);
-    setCopied(false);
+ async function generateCode() {
+  if (!profile?.userId) {
+    alert("LINEのユーザー情報を取得できませんでした。");
+    return;
   }
+
+  // 発行者の情報を先にusersへ保存
+  const { error: userError } = await supabase
+    .from("users")
+    .upsert(
+      {
+        line_user_id: profile.userId,
+        name: profile.displayName,
+        roles: [registrant],
+        send_notification_days: Number(notificationDays),
+        prefecture: prefecture,
+        city: city,
+      },
+      {
+        onConflict: "line_user_id",
+      }
+    );
+
+  if (userError) {
+    alert("ユーザー情報の保存に失敗しました：" + userError.message);
+    return;
+  }
+
+  // 招待コードを作成
+  const newCode = crypto.randomUUID();
+
+  // 有効期限を24時間後に設定
+  const expiresAt = new Date(
+    Date.now() + 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  // 招待コードをpair_codesへ保存
+  const { error: codeError } = await supabase
+    .from("pair_codes")
+    .insert({
+      code: newCode,
+      issuer_id: profile.userId,
+      issuer_role: registrant,
+      expires_at: expiresAt,
+    });
+
+   if (codeError) {
+    alert("招待コードの発行に失敗しました：" + codeError.message);
+    return;
+   }
+
+   // 招待URLを表示
+   const inviteUrl =
+     `${window.location.origin}/guardian-preview.html?link=${newCode}`;
+
+   setCode(inviteUrl);
+   setCopied(false);
+}
+
 
   // URLをコピーする
   async function copyCode() {
@@ -115,10 +167,41 @@ function RegistrationForm() {
     window.open(shareUrl, "_blank", "noopener,noreferrer");
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    setCompleted(true);
-  }
+  async function handleSubmit(event) {
+   event.preventDefault();
+
+   // LINEのユーザー情報を確認
+   if (!profile?.userId) {
+    alert("LINEのユーザー情報を取得できませんでした。LINEから開き直してください。");
+    return;
+   }
+
+    // Supabaseに登録情報を保存
+    const { error } = await supabase
+     .from("users")
+     .upsert(
+       {
+         line_user_id: profile.userId,
+         name: profile.displayName,
+         roles: [registrant],
+         send_notification_days: Number(notificationDays),
+         prefecture: prefecture,
+         city: city,
+       },
+       {
+         onConflict: "line_user_id",
+       }
+     );
+
+   if (error) {
+    alert("登録に失敗しました：" + error.message);
+    return;
+   }
+
+   // 保存できた場合だけ確認画面へ
+   setCompleted(true);
+ }
+
 
   // 登録内容の確認画面
   if (completed) {
@@ -138,7 +221,7 @@ function RegistrationForm() {
           </section>
 
           <p className="registration-note">
-            ※現在は画面確認用です。登録情報は保存されていません。
+            登録情報を保存しました。
           </p>
 
           <button

@@ -1,18 +1,21 @@
 
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
+import { supabase } from "../supabaseClient";
 import "./GuardianLink.css";
 
 function GuardianLink() {
   const [confirmed, setConfirmed] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [inviter, setInviter] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const params = new URLSearchParams(window.location.search);
   const linkToken = params.get("link");
 
-  // LINEの初期化とプロフィール取得
+  // LINEの初期化と招待情報の取得
   useEffect(() => {
     async function initialize() {
       try {
@@ -29,54 +32,158 @@ function GuardianLink() {
 
         const lineProfile = await liff.getProfile();
         setProfile(lineProfile);
+
+        if (!linkToken) {
+          throw new Error("連携用URLの情報が見つかりません。");
+        }
+
+        // 招待コードを検索
+        const { data: codeData, error: codeError } = await supabase
+          .from("pair_codes")
+          .select("issuer_id, issuer_role, expires_at")
+          .eq("code", linkToken)
+          .maybeSingle();
+
+        if (codeError) throw codeError;
+
+        if (!codeData) {
+          throw new Error("招待コードが見つかりません。URLを確認してください。");
+        }
+
+        // 有効期限を確認
+        if (new Date(codeData.expires_at) < new Date()) {
+          throw new Error("この招待URLは有効期限が切れています。");
+        }
+
+        // 自分自身が発行したURLではないか確認
+        if (codeData.issuer_id === lineProfile.userId) {
+          throw new Error("自分が発行したURLからは連携できません。");
+        }
+
+        // 招待した人の名前を取得
+        const { data: inviterData, error: inviterError } = await supabase
+          .from("users")
+          .select("line_user_id, name")
+          .eq("line_user_id", codeData.issuer_id)
+          .maybeSingle();
+
+        if (inviterError) throw inviterError;
+
+        if (!inviterData) {
+          throw new Error("招待した人の登録情報が見つかりません。");
+        }
+
+        setInviter({
+          ...inviterData,
+          role: codeData.issuer_role,
+        });
+
       } catch (e) {
         console.error(e);
-        setError("LINEの情報を取得できませんでした。");
+        setError(e.message || "連携情報を取得できませんでした。");
       } finally {
         setLoading(false);
       }
     }
 
     initialize();
-  }, []);
+  }, [linkToken]);
+
+  // 連携を承認する
+  async function handleConfirm() {
+    if (!profile || !inviter) return;
+
+    setSaving(true);
+    setError("");
+
+    try {
+      // 承認する人がusersに登録済みか確認
+      const { data: recipient, error: recipientError } = await supabase
+        .from("users")
+        .select("line_user_id")
+        .eq("line_user_id", profile.userId)
+        .maybeSingle();
+
+      if (recipientError) throw recipientError;
+
+      if (!recipient) {
+        throw new Error(
+          "先に見守り登録フォームから登録してください。"
+        );
+      }
+
+      // 招待した人の役割に応じてIDを振り分ける
+      const seniorId =
+        inviter.role === "senior"
+          ? inviter.line_user_id
+          : profile.userId;
+
+      const guardianId =
+        inviter.role === "guardian"
+          ? inviter.line_user_id
+          : profile.userId;
+
+      // relationshipsに連携情報を保存
+      const { error: insertError } = await supabase
+        .from("relationships")
+        .insert({
+          senior_id: seniorId,
+          guardian_id: guardianId,
+          relationship_type: "family",
+        });
+
+      if (insertError) throw insertError;
+
+      setConfirmed(true);
+
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "連携に失敗しました。");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   // 読み込み中
   if (loading) {
     return (
       <main className="guardian-page">
         <section className="guardian-card">
-          <p>LINE情報を確認しています...</p>
+          <p>LINE情報と連携情報を確認しています...</p>
         </section>
       </main>
     );
   }
 
-  // 確認後の画面
+  // 連携完了画面
   if (confirmed) {
     return (
       <main className="guardian-page">
         <section className="guardian-card">
           <div className="guardian-icon">✓</div>
-          <h1>確認しました</h1>
-          <p>連携の確認画面を終了します。</p>
-
-          <p className="guardian-note">
-            ※現在は画面確認用です。
-            実際の連携はまだ完了していません。
+          <h1>連携が完了しました</h1>
+          <p>
+            {inviter?.name}さんとの見守り連携が完了しました。
           </p>
-
-          <button
-            className="guardian-button"
-            onClick={() => setConfirmed(false)}
-          >
-            戻る
-          </button>
+          <p className="guardian-note">
+            これからよろしくお願いします。
+          </p>
         </section>
       </main>
     );
   }
 
-  // 保護者向け連携画面
+  const inviterRoleName =
+    inviter?.role === "senior"
+      ? "高齢者本人"
+      : "家族・保護者";
+
+  const recipientRoleName =
+    inviter?.role === "senior"
+      ? "家族・保護者"
+      : "高齢者本人";
+
+  // 招待内容の確認画面
   return (
     <main className="guardian-page">
       <section className="guardian-card">
@@ -89,34 +196,34 @@ function GuardianLink() {
         <h1>見守り連携のご案内</h1>
 
         <p className="guardian-description">
-          ご家族の見守りを始めましょう。
-          以下の内容を確認してください。
+          以下の内容を確認して、連携を行ってください。
         </p>
 
-        <div className="guardian-info">
-          <p className="guardian-info-title">
-            <span>✿</span> 連携について
-          </p>
+        {inviter && (
+          <>
+            <div className="guardian-person">
+              <div className="guardian-avatar">♧</div>
+              <div>
+                <p className="guardian-label">
+                  招待した人（{inviterRoleName}）
+                </p>
+                <p className="guardian-person-name">
+                  {inviter.name || "LINEユーザー"}
+                </p>
+              </div>
+            </div>
 
-          <p>
-            高齢者本人のチェックインが一定期間ない場合、
-            ご家族に通知するための連携を行います。
-          </p>
-        </div>
-
-        <div className="guardian-person">
-          <div className="guardian-avatar">♧</div>
-
-          <div>
-            <p className="guardian-label">
-              連携する保護者
-            </p>
-
-            <p className="guardian-person-name">
-              {profile?.displayName || "LINEユーザー"}
-            </p>
-          </div>
-        </div>
+            <div className="guardian-info">
+              <p className="guardian-info-title">
+                ✿ 連携する相手
+              </p>
+              <p>
+                {profile?.displayName || "LINEユーザー"}さん
+                （{recipientRoleName}）
+              </p>
+            </div>
+          </>
+        )}
 
         {error && (
           <p className="guardian-warning">
@@ -124,24 +231,16 @@ function GuardianLink() {
           </p>
         )}
 
-        {!linkToken && (
-          <p className="guardian-warning">
-            連携用URLの情報が見つかりません。
-            ご家族から送られたURLをもう一度開いてください。
-          </p>
-        )}
-
         <button
           className="guardian-button"
-          disabled={!linkToken || !profile}
-          onClick={() => setConfirmed(true)}
+          disabled={!linkToken || !profile || !inviter || saving || !!error}
+          onClick={handleConfirm}
         >
-          この人と連携する
+          {saving ? "連携しています..." : "この人と連携する"}
         </button>
 
         <p className="guardian-note">
-          ※現在は画面確認用です。
-          ボタンを押しても実際の連携は完了しません。
+          承認すると、本人と保護者の連携情報が登録されます。
         </p>
 
         <p className="guardian-footer">

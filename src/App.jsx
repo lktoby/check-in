@@ -3,6 +3,7 @@ import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
+import RegistrationChoice from "./components/RegistrationChoice";
 
 function App() {
   const [message, setMessage] = useState("");
@@ -67,6 +68,9 @@ function App() {
           Check in
         </button>
       )}
+      {profile && (
+        <RegistrationChoice profile={profile} />
+  )}
     </div>
   );
 }
