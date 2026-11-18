@@ -1,0 +1,196 @@
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap");
+
+:root {
+  /* ベースカラー（既存デザインと統一） */
+  --bg-page: #fff8f3;
+  --bg-card: #fffefa;
+  --bg-soft: #f2f5eb;
+  --bg-accent-light: #e3efdf;
+  --bg-peach-light: #f9e9df;
+  --bg-warning: #fff0e9;
+
+  /* ブランド・アクセントカラー */
+  --green: #66866a;
+  --green-dark: #435b49;
+  --green-hover: #354e3b;
+  --green-muted: #819477;
+
+  /* テキスト・ボーダー */
+  --text-main: #4b5148;
+  --text-sub: #85877d;
+  --text-warning: #984f38;
+  --line: #d9dfcf;
+  --shadow-card: 0 5px 0 #e9e8dc;
+
+  /* フォント */
+  --font-main: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 15px;
+  line-height: 1.9;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-main);
+  color: var(--text-main);
+}
+
+/* 共通レイアウト（画面全体の背景と中央カード） */
+.app-page {
+  min-height: 100vh;
+  padding: 40px 16px;
+  background: var(--bg-page);
+}
+
+.app-container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px clamp(20px, 6vw, 56px);
+  background: var(--bg-card);
+  border: 2px solid var(--line);
+  border-radius: 24px 20px 26px 22px;
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+/* 共通見出し・装飾 */
+.app-subtitle {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+
+.app-flourish {
+  margin: 14px 0 22px;
+  color: var(--green-muted);
+  font-size: 18px;
+  letter-spacing: 0.2em;
+}
+
+/* 共通セクション枠（手書き風二重枠） */
+.app-section {
+  position: relative;
+  margin: 22px 0;
+  padding: 22px 20px;
+  border: 1.5px solid var(--line);
+  border-radius: 17px 12px 20px 13px / 13px 19px 12px 18px;
+  text-align: left;
+  transform: rotate(-0.2deg);
+}
+
+.app-section::before {
+  position: absolute;
+  inset: 4px -3px -4px 3px;
+  border: 1px solid rgba(102, 134, 106, 0.45);
+  border-radius: 13px 19px 11px 17px / 19px 12px 18px 11px;
+  content: "";
+  pointer-events: none;
+  transform: rotate(0.45deg);
+}
+
+.app-section h2 {
+  margin: 0 0 10px;
+  color: var(--green-dark);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 共通ボタン */
+.btn-primary {
+  display: block;
+  width: min(100%, 320px);
+  min-height: 48px;
+  margin: 24px auto 0;
+  padding: 13px 22px;
+  border: 1px solid var(--green-dark);
+  border-radius: 999px;
+  background: var(--green-dark);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--green-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-block;
+  margin: 12px auto 0;
+  padding: 10px 22px;
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-soft);
+}
+
+/* ステータス表示カード */
+.info-box {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-soft);
+  text-align: left;
+}
+
+.alert-warning {
+  padding: 12px 14px;
+  margin: 14px 0;
+  border-radius: 12px;
+  background: var(--bg-warning);
+  color: var(--text-warning);
+  font-size: 13px;
+}
+
+@media (max-width: 520px) {
+  .app-page {
+    padding: 18px 12px;
+  }
+
+  .app-container {
+    padding: 28px 16px;
+  }
+
+  .app-section {
+    padding: 18px 14px;
+  }
+}
