@@ -25,12 +25,12 @@ supabase secrets set \
 ## デプロイ
 
 ```sh
-supabase functions deploy checkin --no-verify-jwt
-supabase functions deploy daily-checkin-reminder --no-verify-jwt
-supabase functions deploy overdue-alert --no-verify-jwt
+supabase functions deploy checkin
+supabase functions deploy daily-checkin-reminder
+supabase functions deploy overdue-alert
 ```
 
-`--no-verify-jwt` にする理由: `checkin` は LINE の ID トークンで、cron の2つは `x-cron-secret` で認証しているため。
+JWT 検証は `supabase/config.toml` の `verify_jwt = false` で切っている。理由: `checkin` は LINE の ID トークンで、cron の2つは `x-cron-secret` で認証しているため。
 
 ## LIFF 側の設定
 

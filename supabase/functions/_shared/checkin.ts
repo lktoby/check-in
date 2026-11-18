@@ -32,14 +32,14 @@ export async function getLastCheckins(
   const since = new Date(Date.now() - lookbackDays * DAY).toISOString();
   const { data, error } = await supabase
     .from("check_ins")
-    .select("line_user_id, checked_in_at")
-    .gte("checked_in_at", since);
+    .select("line_user_id, created_at")
+    .gte("created_at", since);
   if (error) throw error;
 
   const last = new Map<string, string>();
   for (const row of data ?? []) {
     const prev = last.get(row.line_user_id);
-    if (!prev || Date.parse(row.checked_in_at) > Date.parse(prev)) last.set(row.line_user_id, row.checked_in_at);
+    if (!prev || Date.parse(row.created_at) > Date.parse(prev)) last.set(row.line_user_id, row.created_at);
   }
   return last;
 }

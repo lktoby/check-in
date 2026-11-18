@@ -57,11 +57,11 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from("check_ins")
       .insert({ line_user_id: user.userId, display_name: user.name ?? null })
-      .select("checked_in_at")
+      .select("created_at")
       .single();
     if (error) throw error;
 
-    return json({ ok: true, checked_in_at: data.checked_in_at });
+    return json({ ok: true, checked_in_at: data.created_at });
   } catch (e) {
     console.error("[checkin]", e);
     return json({ error: "internal_error" }, 500);
