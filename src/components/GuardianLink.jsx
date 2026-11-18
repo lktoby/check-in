@@ -131,7 +131,7 @@ function GuardianLink() {
       const { error: insertError } = await supabase
         .from("relationships")
         .insert({
-          issuer_id: seniorId,
+          senior_id: seniorId,
           guardian_id: guardianId,
           relationship_type: "family",
         });
