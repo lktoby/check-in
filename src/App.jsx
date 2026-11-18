@@ -142,6 +142,7 @@ function App() {
           {isCheckingIn ? "記録中..." : "チェックイン"}
         </button>
       )}
+      <WordMatchGame />
     </div>
   );
 }
