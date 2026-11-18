@@ -2,44 +2,30 @@
 //
 // ブラウザから直接 check_ins に insert すると、他人の line_user_id でもチェックインできてしまう。
 // そこで LIFF の ID トークンを LINE のサーバーで検証し、本人の userId だけを記録する。
+// あわせて、翌朝の「元気ですか？」を送るためのサービス通知トークンを発行して保存する。
 //
-// リクエスト: POST { "idToken": liff.getIDToken() の値 }
-// レスポンス: 200 { ok: true, checked_in_at }
+// リクエスト: POST { "idToken": liff.getIDToken(), "accessToken": liff.getAccessToken() }
+// レスポンス: 200 { ok: true, checked_in_at, notification: "saved" | "failed" | "skipped" }
 //            400 idToken なし / 401 トークンが無効・期限切れ / 404 ユーザー未登録
 //
-// 必要な環境変数:
-//   LINE_LOGIN_CHANNEL_ID … LIFF アプリを作った「LINEログイン」チャネルのチャネルID
-// デプロイ: supabase functions deploy checkin --no-verify-jwt
+// 必要な環境変数: LINE_CHANNEL_ID, LINE_CHANNEL_SECRET
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { verifyIdToken } from "../_shared/auth.ts";
+import { issueAndSave } from "../_shared/notificationTokens.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-/** ID トークンを LINE に検証してもらい、本人の userId と表示名を返す */
-async function verifyIdToken(idToken: string): Promise<{ userId: string; name?: string } | null> {
-  const clientId = Deno.env.get("LINE_LOGIN_CHANNEL_ID");
-  if (!clientId) throw new Error("LINE_LOGIN_CHANNEL_ID が設定されていません");
-
-  const res = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ id_token: idToken, client_id: clientId }),
-  });
-  if (!res.ok) return null; // 改ざん・期限切れ・別チャネルのトークン
-  const payload = await res.json();
-  return { userId: payload.sub, name: payload.name };
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   try {
-    const { idToken } = await req.json().catch(() => ({}));
+    const { idToken, accessToken } = await req.json().catch(() => ({}));
     if (!idToken) return json({ error: "id_token_required" }, 400);
 
     const user = await verifyIdToken(idToken);
@@ -61,7 +47,19 @@ Deno.serve(async (req) => {
       .single();
     if (error) throw error;
 
-    return json({ ok: true, checked_in_at: data.created_at });
+    // 翌朝のリマインダー用の通知トークン。失敗してもチェックイン自体は成功として返す
+    let notification: "saved" | "failed" | "skipped" = "skipped";
+    if (accessToken) {
+      try {
+        await issueAndSave(supabase, user.userId, "checkin", accessToken);
+        notification = "saved";
+      } catch (e) {
+        console.error("[checkin] 通知トークンの発行に失敗:", e);
+        notification = "failed";
+      }
+    }
+
+    return json({ ok: true, checked_in_at: data.created_at, notification });
   } catch (e) {
     console.error("[checkin]", e);
     return json({ error: "internal_error" }, 500);

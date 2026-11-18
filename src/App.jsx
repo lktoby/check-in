@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
+import { checkIn as checkInApi } from "./lineApi";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
 
@@ -85,12 +86,11 @@ function App() {
     setMessage("Saving check-in...");
 
     try {
-      const { error: checkInError } = await supabase.from("check_ins").insert({
-        line_user_id: profile.userId,
-        display_name: profile.displayName,
-      });
-
-      if (checkInError) throw checkInError;
+      // Edge Function 経由で記録（本人確認 + 翌朝の通知トークン保存）
+      const result = await checkInApi();
+      if (result.notification === "failed") {
+        console.warn("通知トークンの保存に失敗しました（チェックインは記録済み）");
+      }
 
       setMessage("Check-in saved.");
     } catch (e) {

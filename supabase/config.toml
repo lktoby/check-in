@@ -437,3 +437,6 @@ verify_jwt = false
 
 [functions.overdue-alert]
 verify_jwt = false
+
+[functions.notify-subscribe]
+verify_jwt = false
