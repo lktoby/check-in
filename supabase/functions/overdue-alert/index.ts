@@ -2,7 +2,9 @@
 // pg_cron から 1時間に1回呼び出す（supabase/functions/README.md を参照）
 //
 // 判定: 最終チェックイン（一度もなければ users.created_at）からの経過時間が
-//       OVERDUE_HOURS 以上、OVERDUE_HOURS + CHECK_INTERVAL_HOURS 未満の人
+//       しきい値以上、しきい値 + CHECK_INTERVAL_HOURS 未満の人
+//   しきい値 = 高齢者ごとの users.send_notification_days × 24時間（登録フォームの「通知までの日数」）
+//   ※ 見守る側が招待した場合、高齢者の行は DB の初期値（1日）になる点に注意
 //   → cron が CHECK_INTERVAL_HOURS ごとに動いていれば、1回の未チェックインにつき通知はちょうど1回になる
 //   （通知済みを記録するテーブルを作らずに済ませるための方法。cron が止まると通知が漏れる点に注意）
 //
@@ -10,8 +12,8 @@
 //
 // 必要な環境変数:
 //   LINE_CHANNEL_ACCESS_TOKEN, CRON_SECRET
-//   OVERDUE_HOURS        … 何時間チェックインがなければ通知するか（省略時 48 = 2日）
 //   CHECK_INTERVAL_HOURS … cron の間隔（省略時 1）。cron の設定と必ず揃えること
+//   OVERDUE_HOURS        … テスト用（任意）。設定すると全員のしきい値をこの時間にする
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendPushMessage } from "../_shared/line.ts";
@@ -22,12 +24,17 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const OVERDUE_HOURS = Number(Deno.env.get("OVERDUE_HOURS") ?? 48);
+const OVERDUE_HOURS_OVERRIDE = Deno.env.get("OVERDUE_HOURS") ? Number(Deno.env.get("OVERDUE_HOURS")) : null;
 const CHECK_INTERVAL_HOURS = Number(Deno.env.get("CHECK_INTERVAL_HOURS") ?? 1);
 
-function alertMessage(seniorName: string) {
-  const days = Math.floor(OVERDUE_HOURS / 24);
-  const span = days >= 1 && OVERDUE_HOURS % 24 === 0 ? `${days}日` : `${OVERDUE_HOURS}時間`;
+/** その高齢者について、何時間チェックインがなければ通知するか */
+function thresholdHours(sendNotificationDays: number | null): number {
+  return OVERDUE_HOURS_OVERRIDE ?? Math.max(1, sendNotificationDays ?? 1) * 24;
+}
+
+function alertMessage(seniorName: string, hours: number) {
+  const days = Math.floor(hours / 24);
+  const span = days >= 1 && hours % 24 === 0 ? `${days}日` : `${hours}時間`;
   return `【見守りアプリ】\n${seniorName}さんの元気確認が${span}以上ありません。\nお手数ですが、電話などで様子を確認してください。`;
 }
 
@@ -40,7 +47,7 @@ Deno.serve(async (req) => {
     // 1. 高齢者の一覧
     const { data: seniors, error } = await supabase
       .from("users")
-      .select("line_user_id, name, created_at")
+      .select("line_user_id, name, created_at, send_notification_days")
       .contains("roles", ["senior"]);
     if (error) throw error;
 
@@ -50,7 +57,8 @@ Deno.serve(async (req) => {
     const overdue = (seniors ?? []).filter((s) => {
       const base = lastCheckins.get(s.line_user_id) ?? s.created_at;
       const elapsedHours = (now - new Date(base).getTime()) / HOUR;
-      return elapsedHours >= OVERDUE_HOURS && elapsedHours < OVERDUE_HOURS + CHECK_INTERVAL_HOURS;
+      const limit = thresholdHours(s.send_notification_days);
+      return elapsedHours >= limit && elapsedHours < limit + CHECK_INTERVAL_HOURS;
     });
     if (overdue.length === 0) return Response.json({ overdue: 0, sent: 0 });
 
@@ -62,9 +70,12 @@ Deno.serve(async (req) => {
     if (relError) throw relError;
 
     // 4. 見守る側に1人ずつ送る（1人が失敗しても他の人には送る）
-    const names = new Map(overdue.map((s) => [s.line_user_id, s.name]));
+    const byId = new Map(overdue.map((s) => [s.line_user_id as string, s] as const));
     const results = await Promise.allSettled(
-      (relations ?? []).map((r) => sendPushMessage(r.guardian_id, alertMessage(names.get(r.senior_id)!))),
+      (relations ?? []).map((r) => {
+        const s = byId.get(r.senior_id)!;
+        return sendPushMessage(r.guardian_id, alertMessage(s.name, thresholdHours(s.send_notification_days)));
+      }),
     );
     const failed = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
     failed.forEach((f) => console.error("[overdue-alert] 送信失敗:", f.reason));

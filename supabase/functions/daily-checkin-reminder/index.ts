@@ -1,12 +1,9 @@
 // 毎朝、チェックインが必要な高齢者に「元気ですか？」の LINE を送る Edge Function
 // pg_cron から 1日1回呼び出す（supabase/functions/README.md を参照）
 //
-// 送る相手: users.roles に "senior" を含み、最終チェックインから
-//          send_notification_days 日以上たっている人（日本時間の日付で数える）
-//   - send_notification_days = 1 → 今日まだチェックインしていなければ毎日送る
-//   - send_notification_days = 3 → 最後のチェックインから3日目に送る
-//     （返事がなければ次の日以降も毎日送る）
-//   - 一度もチェックインしていない人には毎日送る
+// 送る相手: users.roles に "senior" を含み、今日（日本時間）まだチェックインしていない人
+//   ※ users.send_notification_days は「何日チェックインがなければ家族へ通知するか」の設定
+//     （登録フォームの「通知までの日数」）。こちらでは使わず、overdue-alert で使う
 //
 // 必要な環境変数（supabase secrets set で登録）:
 //   LINE_CHANNEL_ACCESS_TOKEN … Messaging API のアクセストークン
@@ -47,7 +44,7 @@ Deno.serve(async (req) => {
     // 1. 高齢者の一覧
     const { data: seniors, error } = await supabase
       .from("users")
-      .select("line_user_id, send_notification_days")
+      .select("line_user_id")
       .contains("roles", ["senior"]);
     if (error) throw error;
 
@@ -58,9 +55,7 @@ Deno.serve(async (req) => {
     const targets = (seniors ?? [])
       .filter((s) => {
         const last = lastCheckins.get(s.line_user_id);
-        if (!last) return true;
-        const interval = Math.max(1, s.send_notification_days ?? 1);
-        return jstDaysBetween(last) >= interval;
+        return !last || jstDaysBetween(last) >= 1;
       })
       .map((s) => s.line_user_id);
 

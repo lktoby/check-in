@@ -4,7 +4,7 @@
 |---|---|---|
 | `checkin` | LIFF（App.jsx） | ID トークンで本人確認してチェックインを記録 |
 | `daily-checkin-reminder` | pg_cron（毎朝8時） | チェックインが必要な高齢者に「元気ですか？」を送る |
-| `overdue-alert` | pg_cron（毎時） | 一定時間チェックインがない高齢者の見守る側に通知 |
+| `overdue-alert` | pg_cron（毎時） | `send_notification_days` 日チェックインがない高齢者の見守る側に通知 |
 
 共通処理は `_shared/` にある（`line.ts` = LINE送信、`checkin.ts` = 日付計算・最終チェックイン、`cors.ts`）。
 
@@ -16,7 +16,6 @@ supabase secrets set \
   LINE_LOGIN_CHANNEL_ID=... \
   LIFF_ID=... \
   CRON_SECRET=... \
-  OVERDUE_HOURS=48 \
   CHECK_INTERVAL_HOURS=1
 ```
 
@@ -74,4 +73,5 @@ $$);
 curl -X POST "https://xxxx.supabase.co/functions/v1/overdue-alert" -H "x-cron-secret: <CRON_SECRET>"
 ```
 
-ゲリラテスト（スライド25）のときは `OVERDUE_HOURS` を小さく（例: 1）すると、すぐ通知まで確かめられる。
+家族へ通知するまでの時間は、高齢者ごとの `users.send_notification_days`（登録フォームの「通知までの日数」）× 24時間。
+テストのときは `supabase secrets set OVERDUE_HOURS=1` で全員を1時間にすると、すぐ通知まで確かめられる（終わったら `supabase secrets unset OVERDUE_HOURS`）。
