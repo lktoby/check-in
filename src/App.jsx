@@ -1,8 +1,11 @@
+
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
+import RegistrationChoice from "./components/RegistrationChoice";
+import GuardianLink from "./components/GuardianLink";
 
 function App() {
   const [message, setMessage] = useState("");
@@ -12,7 +15,14 @@ function App() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
 
+  // 招待URLの情報があるか確認
+  const params = new URLSearchParams(window.location.search);
+  const linkToken = params.get("link");
+
   useEffect(() => {
+    // 招待URLの場合はGuardianLink側でLIFFを初期化する
+    if (linkToken) return;
+
     async function initialize() {
       try {
         await liff.init({
@@ -35,7 +45,7 @@ function App() {
     }
 
     initialize();
-  }, []);
+  }, [linkToken]);
 
   async function registerUser(event) {
     event.preventDefault();
@@ -102,6 +112,12 @@ function App() {
     }
   }
 
+  // 招待URLから開いた場合
+  if (linkToken) {
+    return <GuardianLink />;
+  }
+
+  // 通常アクセスの場合
   return (
     <div className="App">
       <h1>LINE 仮登録</h1>
@@ -141,6 +157,10 @@ function App() {
         >
           {isCheckingIn ? "記録中..." : "チェックイン"}
         </button>
+      )}
+
+      {profile && (
+        <RegistrationChoice profile={profile} />
       )}
     </div>
   );
