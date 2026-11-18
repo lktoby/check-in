@@ -125,7 +125,7 @@ function RegistrationForm({ profile }) {
     .from("pair_codes")
     .insert({
       code: newCode,
-      senior_id: profile.userId,
+      issuer_id: profile.userId,
       issuer_role: registrant,
       expires_at: expiresAt,
     });

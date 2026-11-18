@@ -40,7 +40,7 @@ function GuardianLink() {
         // 招待コードを検索
         const { data: codeData, error: codeError } = await supabase
           .from("pair_codes")
-          .select("senior_id, issuer_role, expires_at")
+          .select("issuer_id, issuer_role, expires_at")
           .eq("code", linkToken)
           .maybeSingle();
 
@@ -56,7 +56,7 @@ function GuardianLink() {
         }
 
         // 自分自身が発行したURLではないか確認
-        if (codeData.senior_id === lineProfile.userId) {
+        if (codeData.issuer_id === lineProfile.userId) {
           throw new Error("自分が発行したURLからは連携できません。");
         }
 
@@ -64,7 +64,7 @@ function GuardianLink() {
         const { data: inviterData, error: inviterError } = await supabase
           .from("users")
           .select("line_user_id, name")
-          .eq("line_user_id", codeData.senior_id)
+          .eq("line_user_id", codeData.issuer_id)
           .maybeSingle();
 
         if (inviterError) throw inviterError;
@@ -131,7 +131,7 @@ function GuardianLink() {
       const { error: insertError } = await supabase
         .from("relationships")
         .insert({
-          senior_id: seniorId,
+          issuer_id: seniorId,
           guardian_id: guardianId,
           relationship_type: "family",
         });
