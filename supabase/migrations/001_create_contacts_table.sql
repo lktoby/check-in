@@ -28,11 +28,14 @@ CREATE POLICY "Allow all access for relationships during dev" ON relationships F
 -- 3. pair_codes テーブル（アプリ内招待コード）
 CREATE TABLE IF NOT EXISTS pair_codes (
   code TEXT PRIMARY KEY,
-  issuer_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
-  issuer_role TEXT NOT NULL DEFAULT 'senior' CHECK (issuer_role IN ('senior', 'guardian')),
+  senior_id TEXT NOT NULL REFERENCES users(line_user_id) ON DELETE CASCADE,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE pair_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access for pair_codes during dev" ON pair_codes FOR ALL USING (true) WITH CHECK (true);
+
 
 -- 4. check_ins テーブル（チェックイン履歴）
 CREATE TABLE IF NOT EXISTS check_ins (
