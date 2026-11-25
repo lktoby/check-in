@@ -15,11 +15,14 @@ const prefectures = [
   "宮崎県", "鹿児島県", "沖縄県"
 ];
 
-function RegistrationForm({ profile }) {
-  const [registrant, setRegistrant] = useState("senior");
-  const [notificationDays, setNotificationDays] = useState("2");
-  const [prefecture, setPrefecture] = useState("");
-  const [city, setCity] = useState("");
+function RegistrationForm({ profile,initialUser, onComplete }) {
+  const [registrant, setRegistrant] = useState(initialUser?.roles?.[0] || "senior");
+  const [notificationDays, setNotificationDays] = useState(
+    String(initialUser?.send_notification_days || "2")
+  );
+  const [prefecture, setPrefecture] = useState(initialUser?.prefecture || "");
+  const [city, setCity] = useState(initialUser?.city || "");
+  const [savedUser, setSavedUser] = useState(initialUser || null);
   const [municipalities, setMunicipalities] = useState([]);
   const [loadingCities, setLoadingCities] = useState(true);
   const [cityError, setCityError] = useState("");
@@ -189,39 +192,42 @@ function RegistrationForm({ profile }) {
 
 
   async function handleSubmit(event) {
-   event.preventDefault();
+    event.preventDefault();
 
-   // LINEのユーザー情報を確認
-   if (!profile?.userId) {
-    alert("LINEのユーザー情報を取得できませんでした。LINEから開き直してください。");
-    return;
-   }
+    // LINEのユーザー情報を確認
+    if (!profile?.userId) {
+      alert("LINEのユーザー情報を取得できませんでした。LINEから開き直してください。");
+      return;
+    }
 
-    // Supabaseに登録情報を保存
-    const { error } = await supabase
-     .from("users")
-     .upsert(
-       {
-         line_user_id: profile.userId,
-         name: profile.displayName,
-         roles: [registrant],
-         send_notification_days: Number(notificationDays),
-         prefecture: prefecture,
-         city: city,
-       },
-       {
-         onConflict: "line_user_id",
-       }
-     );
+    // Supabaseに登録情報を保存し、保存したデータを取得（.select().single() を追加）
+    const { data, error } = await supabase
+      .from("users")
+      .upsert(
+        {
+          line_user_id: profile.userId,
+          name: profile.displayName,
+          roles: [registrant],
+          send_notification_days: Number(notificationDays),
+          prefecture: prefecture,
+          city: city,
+        },
+        {
+          onConflict: "line_user_id",
+        }
+      )
+      .select()
+      .single();
 
-   if (error) {
-    alert("登録に失敗しました：" + error.message);
-    return;
-   }
+    if (error) {
+      alert("登録に失敗しました：" + error.message);
+      return;
+    }
 
-   // 保存できた場合だけ確認画面へ
-   setCompleted(true);
- }
+    // 保存できた場合だけ確認画面へ
+    setSavedUser(data);
+    setCompleted(true);
+  }
 
 
   // 登録内容の確認画面
@@ -244,6 +250,13 @@ function RegistrationForm({ profile }) {
           <p className="registration-note">
             登録情報を保存しました。
           </p>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => onComplete && onComplete(savedUser)}
+          >
+            ホーム画面へ進む →
+          </button>
 
           <button
             type="button"
