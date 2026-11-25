@@ -1,34 +1,32 @@
-
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import { supabase } from "./supabaseClient";
-import { checkIn as checkInApi } from "./lineApi";
 import "./App.css";
+import "./base.css";
 import "bootstrap/dist/css/bootstrap.css";
-import RegistrationChoice from "./components/RegistrationChoice";
+import RegistrationForm from "./components/RegistrationForm";
+import HomeScreen from "./components/HomeScreen";
 import GuardianLink from "./components/GuardianLink";
 
 function App() {
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [userRecord, setUserRecord] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // 招待URLの情報があるか確認
   const params = new URLSearchParams(window.location.search);
   const linkToken = params.get("link");
 
   useEffect(() => {
-    // 招待URLの場合はGuardianLink側でLIFFを初期化する
-    if (linkToken) return;
+    if (linkToken) {
+      setLoading(false);
+      return;
+    }
 
     async function initialize() {
       try {
-        await liff.init({
-          liffId: import.meta.env.VITE_LIFF_ID,
-        });
+        await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
 
         if (!liff.isLoggedIn()) {
           liff.login();
@@ -37,132 +35,51 @@ function App() {
 
         const lineProfile = await liff.getProfile();
         setProfile(lineProfile);
-        setMessage("LINE profile loaded. Confirm the details and register.");
+
+        // Supabaseから既存の登録情報を取得
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("*")
+          .eq("line_user_id", lineProfile.userId)
+          .maybeSingle();
+
+        if (existingUser?.prefecture) {
+          setUserRecord(existingUser);
+        }
       } catch (e) {
-        setMessage("Initialization failed.");
-        console.error("Failed to initialize LIFF or load the LINE profile:", e);
         setError(e?.message || String(e));
+      } finally {
+        setLoading(false);
       }
     }
 
     initialize();
   }, [linkToken]);
 
-  async function registerUser(event) {
-    event.preventDefault();
-    if (!profile || isRegistering) return;
+  if (linkToken) return <GuardianLink />;
+  if (loading) return <div className="App"><p>読み込み中...</p></div>;
+  if (error) return <div className="App"><p>{error}</p></div>;
 
-    setError("");
-    setIsRegistering(true);
-    setMessage("Registering user...");
-
-    try {
-      const { data: savedUser, error: userError } = await supabase
-        .from("users")
-        .upsert(
-          {
-            line_user_id: profile.userId,
-            name: profile.displayName,
-          },
-          { onConflict: "line_user_id" }
-        )
-        .select("line_user_id, name, created_at")
-        .single();
-
-      if (userError) throw userError;
-      if (savedUser?.line_user_id !== profile.userId) {
-        throw new Error("Supabase did not return the saved user row.");
-      }
-
-      setIsRegistered(true);
-      setMessage(`Supabase に仮登録しました: ${savedUser.name}`);
-    } catch (e) {
-      console.error("Failed to register the LINE profile in Supabase:", e);
-      const detail = [e?.message, e?.code && `code: ${e.code}`, e?.details, e?.hint]
-        .filter(Boolean)
-        .join(" — ");
-      setMessage("仮登録に失敗しました。");
-      setError(detail || String(e));
-    } finally {
-      setIsRegistering(false);
-    }
+  // 登録済みならホーム画面へ
+  if (userRecord && !isEditing) {
+    return (
+      <HomeScreen
+        user={userRecord}
+        onEditProfile={() => setIsEditing(true)}
+      />
+    );
   }
 
-  async function checkIn() {
-    if (!profile || !isRegistered || isCheckingIn) return;
-
-    setError("");
-    setIsCheckingIn(true);
-    setMessage("Saving check-in...");
-
-    try {
-      // Edge Function 経由で記録（本人確認 + 翌朝の通知トークン保存）
-      const result = await checkInApi();
-      if (result.notification === "failed") {
-        console.warn("通知トークンの保存に失敗しました（チェックインは記録済み）");
-      }
-
-      setMessage("Check-in saved.");
-    } catch (e) {
-      console.error("Failed to save check-in:", e);
-      setError(e?.message || String(e));
-      setMessage("Check-in failed.");
-    } finally {
-      setIsCheckingIn(false);
-    }
-  }
-
-  // 招待URLから開いた場合
-  if (linkToken) {
-    return <GuardianLink />;
-  }
-
-  // 通常アクセスの場合
+  // 未登録・編集時は登録フォームへ
   return (
-    <div className="App">
-      <h1>LINE 仮登録</h1>
-
-      {message && <p>{message}</p>}
-      {error && <p><code>{error}</code></p>}
-
-      {profile && (
-        <form className="registration-form" onSubmit={registerUser}>
-          <div className="registration-field">
-            <label htmlFor="line-user-id">LINE user ID</label>
-            <input id="line-user-id" type="text" value={profile.userId} readOnly />
-          </div>
-
-          <div className="registration-field">
-            <label htmlFor="line-display-name">LINE ニックネーム</label>
-            <input
-              id="line-display-name"
-              type="text"
-              value={profile.displayName}
-              readOnly
-            />
-          </div>
-
-          <button type="submit" disabled={isRegistering || isRegistered}>
-            {isRegistering ? "登録中..." : isRegistered ? "登録済み" : "仮登録する"}
-          </button>
-        </form>
-      )}
-
-      {profile && isRegistered && (
-        <button
-          type="button"
-          className="check-in-button"
-          onClick={checkIn}
-          disabled={isCheckingIn}
-        >
-          {isCheckingIn ? "記録中..." : "チェックイン"}
-        </button>
-      )}
-
-      {profile && (
-        <RegistrationChoice profile={profile} />
-      )}
-    </div>
+    <RegistrationForm
+      profile={profile}
+      initialUser={userRecord}
+      onComplete={(savedUser) => {
+        setUserRecord(savedUser);
+        setIsEditing(false);
+      }}
+    />
   );
 }
 
