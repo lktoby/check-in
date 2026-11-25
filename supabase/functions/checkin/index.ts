@@ -2,18 +2,17 @@
 //
 // ブラウザから直接 check_ins に insert すると、他人の line_user_id でもチェックインできてしまう。
 // そこで LIFF の ID トークンを LINE のサーバーで検証し、本人の userId だけを記録する。
-// あわせて、翌朝の「元気ですか？」を送るためのサービス通知トークンを発行して保存する。
+// ※ 今の画面（HomeScreen）は check_ins に直接 insert している。RLS を締めるときにこちらへ切り替える
 //
-// リクエスト: POST { "idToken": liff.getIDToken(), "accessToken": liff.getAccessToken() }
-// レスポンス: 200 { ok: true, checked_in_at, notification: "saved" | "failed" | "skipped" }
+// リクエスト: POST { "idToken": liff.getIDToken() の値 }
+// レスポンス: 200 { ok: true, checked_in_at }
 //            400 idToken なし / 401 トークンが無効・期限切れ / 404 ユーザー未登録
 //
-// 必要な環境変数: LINE_CHANNEL_ID, LINE_CHANNEL_SECRET
+// 必要な環境変数: LIFF_CHANNEL_ID
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { verifyIdToken } from "../_shared/auth.ts";
-import { issueAndSave } from "../_shared/notificationTokens.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -25,7 +24,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   try {
-    const { idToken, accessToken } = await req.json().catch(() => ({}));
+    const { idToken } = await req.json().catch(() => ({}));
     if (!idToken) return json({ error: "id_token_required" }, 400);
 
     const user = await verifyIdToken(idToken);
@@ -47,19 +46,7 @@ Deno.serve(async (req) => {
       .single();
     if (error) throw error;
 
-    // 翌朝のリマインダー用の通知トークン。失敗してもチェックイン自体は成功として返す
-    let notification: "saved" | "failed" | "skipped" = "skipped";
-    if (accessToken) {
-      try {
-        await issueAndSave(supabase, user.userId, "checkin", accessToken);
-        notification = "saved";
-      } catch (e) {
-        console.error("[checkin] 通知トークンの発行に失敗:", e);
-        notification = "failed";
-      }
-    }
-
-    return json({ ok: true, checked_in_at: data.created_at, notification });
+    return json({ ok: true, checked_in_at: data.created_at });
   } catch (e) {
     console.error("[checkin]", e);
     return json({ error: "internal_error" }, 500);
