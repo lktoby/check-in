@@ -1,25 +1,46 @@
 
-const resourceUrl =
-  "https://data.bodik.jp/dataset/afadd732-1610-451c-8306-d35bf4d858ad/resource/048f095c-40a7-46f5-ae3c-6e12d0c8a944/download/gomibunbetujiten.csv";
+const url = process.argv[2];
 
-async function main() {
-  const response = await fetch(resourceUrl);
-
-  console.log("HTTP status:", response.status);
-  console.log(
-    "Content-Type:",
-    response.headers.get("content-type")
-  );
-
-  if (!response.ok) {
-    throw new Error("データの取得に失敗しました");
-  }
-
-  const text = await response.text();
-
-  console.log("\n--- CSVの先頭3000文字 ---\n");
-  console.log(text.slice(0, 3000));
+if (!url) {
+  console.error("CSVのURLを指定してください");
+  process.exit(1);
 }
 
-main().catch(console.error);
+async function main() {
+  console.log("CSV取得中...");
 
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`取得失敗: ${response.status}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+
+  // UTF-8とShift-JISの文字コードに対応
+  const bytes = new Uint8Array(buffer);
+  let text;
+
+  try {
+    text = new TextDecoder("utf-8", {
+      fatal: true
+    }).decode(bytes);
+  } catch {
+    text = new TextDecoder("shift-jis").decode(bytes);
+  }
+
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/);
+
+  console.log("\n取得成功！");
+  console.log(`行数: ${lines.length}`);
+  console.log("\n--- CSVの先頭20行 ---\n");
+
+  console.log(lines.slice(0, 20).join("\n"));
+}
+
+main().catch((error) => {
+  console.error("エラー:", error);
+  process.exitCode = 1;
+});

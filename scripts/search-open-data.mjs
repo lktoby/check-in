@@ -9,6 +9,8 @@ url.searchParams.set("q", keyword);
 url.searchParams.set("rows", "10");
 
 async function main() {
+  console.log(`検索中: ${keyword}`);
+
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -23,7 +25,6 @@ async function main() {
 
   const datasets = json.result.results;
 
-  console.log(`検索語: ${keyword}`);
   console.log(`検索結果: ${datasets.length}件\n`);
 
   for (const dataset of datasets) {
@@ -32,8 +33,6 @@ async function main() {
     console.log("提供組織:", dataset.organization?.title ?? "不明");
     console.log("説明:", dataset.notes ?? "");
     console.log("URL:", dataset.url ?? "");
-
-    console.log("リソース:");
 
     for (const resource of dataset.resources ?? []) {
       console.log({
