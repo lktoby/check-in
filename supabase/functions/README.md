@@ -27,13 +27,13 @@ supabase secrets set \
   LINE_CHANNEL_ACCESS_TOKEN=... \
   LIFF_ID=... \
   LIFF_CHANNEL_ID=... \
-  CRON_SECRET=... \
-  CHECK_INTERVAL_HOURS=1
+  CRON_SECRET=...
 ```
 
 - `LINE_CHANNEL_ACCESS_TOKEN` … 公式アカウント（Messaging API チャネル）のトークン。チャットや GitHub には書かず、直接このコマンドで登録する
 - `LIFF_ID` … 通知のボタンから開く LIFF の ID（`.env` の `VITE_LIFF_ID` と同じ）
 - `LIFF_CHANNEL_ID` … LIFF が入っているミニアプリ（LINEログイン）チャネルのチャネルID（`checkin` 用。公式アカウントのチャネルIDではない）
+- `CHECK_INTERVAL_HOURS` … 任意（省略時 1）。`overdue-alert` の cron を毎時以外の間隔にするときだけ、その間隔（時間）に揃えて登録する
 - `SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` は Supabase が自動で入れてくれる
 
 ## デプロイ
