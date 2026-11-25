@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase, isTestMode } from "../supabaseClient";
 import "./RegistrationForm.css";
 import liff from "@line/liff";
 
@@ -28,6 +28,12 @@ function RegistrationForm({ profile }) {
   const [completed, setCompleted] = useState(false);
 
   const isGuardian = registrant === "guardian";
+  // テストモードでは選択したユーザーの役割を初期設定にする
+  useEffect(() => {
+   if (isTestMode && profile?.role) {
+     setRegistrant(profile.role);
+   }
+  }, [profile]);
 
   // 全国の市区町村データを読み込む
   useEffect(() => {
@@ -136,12 +142,26 @@ function RegistrationForm({ profile }) {
    }
 
    // 招待URLを表示
-   const inviteUrl =
-      `https://liff.line.me/${import.meta.env.VITE_LIFF_ID}?link=${newCode}`;
+  let inviteUrl;
 
-   setCode(inviteUrl);
-   setCopied(false);
-}
+  
+ if (isTestMode) {
+        // テストモードでは現在のアプリURLにテスト用パラメータを付ける
+        const url = new URL(window.location.href);
+        url.searchParams.set("test", "1");
+        url.searchParams.set("link", newCode);
+        inviteUrl = url.toString();
+  } else {
+        // 本番モードでは従来どおりLIFFのURLを発行する
+        inviteUrl =
+          `https://liff.line.me/${import.meta.env.VITE_LIFF_ID}?link=${newCode}`;
+  }
+
+   // 発行したURLを画面に表示する
+      setCode(inviteUrl);
+      setCopied(false);
+ }
+
 
 
   // URLをコピーする
@@ -427,13 +447,15 @@ function RegistrationForm({ profile }) {
                   </button>
                 </div>
 
-                <button
+                {!isTestMode && (
+                  <button
                   type="button"
                   className="secondary-button"
                   onClick={shareToLine}
-                >
-                  LINEで共有
-                </button>
+                  >
+                   LINEで共有
+                  </button>
+                )}
 
                 <p className="registration-note">
                   {copied

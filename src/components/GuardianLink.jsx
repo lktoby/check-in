@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
-import { supabase } from "../supabaseClient";
+import { supabase, isTestMode } from "../supabaseClient";
 import "./GuardianLink.css";
 
-function GuardianLink() {
+function GuardianLink({ profile: selectedProfile }) {
   const [confirmed, setConfirmed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [inviter, setInviter] = useState(null);
@@ -15,23 +15,36 @@ function GuardianLink() {
   const params = new URLSearchParams(window.location.search);
   const linkToken = params.get("link");
 
-  // LINEの初期化と招待情報の取得
+  // LINE情報またはテストユーザー情報と招待情報を取得
   useEffect(() => {
     async function initialize() {
       try {
-        await liff.init({
-          liffId: import.meta.env.VITE_LIFF_ID,
-        });
+        let currentProfile;
 
-        if (!liff.isLoggedIn()) {
-          liff.login({
-            redirectUri: window.location.href,
+        if (isTestMode) {
+          // テストモードでは選択されたテストユーザーを使う
+          if (!selectedProfile) {
+            throw new Error("テストユーザーが選択されていません。");
+          }
+
+          currentProfile = selectedProfile;
+        } else {
+          // 本番モードではLINEを初期化する
+          await liff.init({
+            liffId: import.meta.env.VITE_LIFF_ID,
           });
-          return;
+
+          if (!liff.isLoggedIn()) {
+            liff.login({
+              redirectUri: window.location.href,
+            });
+            return;
+          }
+
+          currentProfile = await liff.getProfile();
         }
 
-        const lineProfile = await liff.getProfile();
-        setProfile(lineProfile);
+        setProfile(currentProfile);
 
         if (!linkToken) {
           throw new Error("連携用URLの情報が見つかりません。");
@@ -56,7 +69,7 @@ function GuardianLink() {
         }
 
         // 自分自身が発行したURLではないか確認
-        if (codeData.issuer_id === lineProfile.userId) {
+        if (codeData.issuer_id === currentProfile.userId) {
           throw new Error("自分が発行したURLからは連携できません。");
         }
 
@@ -77,7 +90,6 @@ function GuardianLink() {
           ...inviterData,
           role: codeData.issuer_role,
         });
-
       } catch (e) {
         console.error(e);
         setError(e.message || "連携情報を取得できませんでした。");
@@ -87,12 +99,11 @@ function GuardianLink() {
     }
 
     initialize();
-  }, [linkToken]);
+  }, [linkToken, selectedProfile]);
 
- 
   // 連携を承認する
   async function handleConfirm() {
-    if (!profile || !inviter) return;
+    if (!profile || !inviter || saving) return;
 
     setSaving(true);
     setError("");
@@ -102,7 +113,7 @@ function GuardianLink() {
       const recipientRole =
         inviter.role === "senior" ? "guardian" : "senior";
 
-      // 招待された側のLINE情報をusersに登録
+      // 招待された側の情報をusersに登録
       const { error: recipientError } = await supabase
         .from("users")
         .upsert(
@@ -146,7 +157,6 @@ function GuardianLink() {
       setSaving(false);
     }
   }
-
 
   // 読み込み中
   if (loading) {

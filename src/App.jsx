@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
-import { supabase } from "./supabaseClient";
+import { supabase, isTestMode } from "./supabaseClient";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
 import RegistrationChoice from "./components/RegistrationChoice";
 import GuardianLink from "./components/GuardianLink";
+import TestUserSelector from "./components/TestUserSelector";
 
 function App() {
   const [message, setMessage] = useState("");
@@ -21,7 +22,7 @@ function App() {
 
   useEffect(() => {
     // 招待URLの場合はGuardianLink側でLIFFを初期化する
-    if (linkToken) return;
+    if (isTestMode || linkToken) return;
 
     async function initialize() {
       try {
@@ -113,52 +114,17 @@ function App() {
   }
 
   // 招待URLから開いた場合
-  if (linkToken) {
-    return <GuardianLink />;
+  if (linkToken && (!isTestMode || profile)) {
+    return <GuardianLink profile={profile} />;
   }
 
+  if (isTestMode && !profile) {
+    return <TestUserSelector onSelect={setProfile} />;
+  }
+  
   // 通常アクセスの場合
   return (
     <div className="App">
-      <h1>LINE 仮登録</h1>
-
-      {message && <p>{message}</p>}
-      {error && <p><code>{error}</code></p>}
-
-      {profile && (
-        <form className="registration-form" onSubmit={registerUser}>
-          <div className="registration-field">
-            <label htmlFor="line-user-id">LINE user ID</label>
-            <input id="line-user-id" type="text" value={profile.userId} readOnly />
-          </div>
-
-          <div className="registration-field">
-            <label htmlFor="line-display-name">LINE ニックネーム</label>
-            <input
-              id="line-display-name"
-              type="text"
-              value={profile.displayName}
-              readOnly
-            />
-          </div>
-
-          <button type="submit" disabled={isRegistering || isRegistered}>
-            {isRegistering ? "登録中..." : isRegistered ? "登録済み" : "仮登録する"}
-          </button>
-        </form>
-      )}
-
-      {profile && isRegistered && (
-        <button
-          type="button"
-          className="check-in-button"
-          onClick={checkIn}
-          disabled={isCheckingIn}
-        >
-          {isCheckingIn ? "記録中..." : "チェックイン"}
-        </button>
-      )}
-
       {profile && (
         <RegistrationChoice profile={profile} />
       )}
