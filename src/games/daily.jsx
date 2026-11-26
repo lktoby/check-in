@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const PROMPTS = [
     "今日のおやつにするなら、何がいいですか？",
@@ -13,22 +13,28 @@ function choosePrompt() {
     return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 }
 
-export function DailyPromptGame() {
+export function DailyPromptGame({ gameData, onComplete }) {
     const [started, setStarted] = useState(false);
     const [prompt, setPrompt] = useState(null);
     const [answer, setAnswer] = useState("");
     const [submittedAnswer, setSubmittedAnswer] = useState("");
+    const completionNotified = useRef(false);
 
     function startGame() {
-        setPrompt(choosePrompt());
+        setPrompt(gameData?.prompt || choosePrompt());
         setAnswer("");
         setSubmittedAnswer("");
+        completionNotified.current = false;
         setStarted(true);
     }
 
     function submitAnswer(event) {
         event.preventDefault();
         setSubmittedAnswer(answer.trim());
+        if (!completionNotified.current) {
+            completionNotified.current = true;
+            onComplete?.();
+        }
     }
 
     return (
@@ -77,9 +83,11 @@ export function DailyPromptGame() {
                     <h2>ありがとうございました。</h2>
                     <p>「{submittedAnswer}」なんですね。お話しくださってありがとうございます。</p>
                     <p>今日のひとことは以上です。</p>
-                    <button className="btn btn-primary" type="button" onClick={startGame}>
-                        もう一度遊ぶ
-                    </button>
+                    {!onComplete && (
+                        <button className="btn btn-primary" type="button" onClick={startGame}>
+                            もう一度遊ぶ
+                        </button>
+                    )}
                 </>
             )}
         </section>

@@ -41,8 +41,8 @@ function GenerateCard({ card, onClick, disabled }) {
     );
 }
 
-function GenerateDeck() {
-    const words = shuffle(WORDS).slice(0, 2);
+function GenerateDeck(sourceWords = WORDS) {
+    const words = sourceWords === WORDS ? shuffle(WORDS).slice(0, 2) : [...sourceWords];
     const cards = words.flatMap((word, pairIndex) => [
         { id: `${pairIndex}-a`, word, revealed: false, matched: false },
         { id: `${pairIndex}-b`, word, revealed: false, matched: false },
@@ -51,23 +51,25 @@ function GenerateDeck() {
     return shuffle(cards);
 }
 
-export function WordMatchGame() {
+export function WordMatchGame({ gameData, onComplete }) {
     const [gameStart, setGameStart] = useState(false);
     const [cards, setCards] = useState([]);
     const [selectedCards, setSelectedCards] = useState([]);
     const [locked, setLocked] = useState(false);
     const [complete, setComplete] = useState(false);
     const mismatchTimeout = useRef(null);
+    const completionNotified = useRef(false);
 
     useEffect(() => () => clearTimeout(mismatchTimeout.current), []);
 
     function startGame() {
         clearTimeout(mismatchTimeout.current);
-        setCards(GenerateDeck());
+        setCards(GenerateDeck(Array.isArray(gameData?.words) ? gameData.words : WORDS));
         setSelectedCards([]);
         setLocked(false);
         setComplete(false);
         setGameStart(true);
+        completionNotified.current = false;
     }
 
     function selectCard(cardId) {
@@ -100,6 +102,10 @@ export function WordMatchGame() {
 
             if (matchedCards.every((item) => item.matched)) {
                 setComplete(true);
+                if (!completionNotified.current) {
+                    completionNotified.current = true;
+                    onComplete?.();
+                }
             }
             return;
         }
@@ -144,7 +150,9 @@ export function WordMatchGame() {
                 <>
                     <h2>クリア！</h2>
                     <p>すべてのペアがそろいました。</p>
-                    <button className="btn btn-primary" type="button" onClick={startGame}>もう一度遊ぶ</button>
+                    {!onComplete && (
+                        <button className="btn btn-primary" type="button" onClick={startGame}>もう一度遊ぶ</button>
+                    )}
                 </>
             )}
         </section>

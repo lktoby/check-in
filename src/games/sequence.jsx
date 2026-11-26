@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const WORDS = ["りんご", "電車", "お茶", "ねこ", "花", "時計", "海", "本"];
 
@@ -13,15 +13,15 @@ function shuffle(items) {
     return shuffled;
 }
 
-function createRound() {
-    const words = shuffle(WORDS);
+function createRound(sourceWords = WORDS) {
+    const words = shuffle(sourceWords);
     const sequence = words.slice(0, 3);
     const choices = shuffle([...sequence, words[3]]);
 
     return { sequence, choices };
 }
 
-export function SequenceTapGame() {
+export function SequenceTapGame({ gameData, onComplete }) {
     const [started, setStarted] = useState(false);
     const [showingSequence, setShowingSequence] = useState(true);
     const [sequence, setSequence] = useState([]);
@@ -29,9 +29,10 @@ export function SequenceTapGame() {
     const [selectedWords, setSelectedWords] = useState([]);
     const [feedback, setFeedback] = useState("");
     const [complete, setComplete] = useState(false);
+    const completionNotified = useRef(false);
 
     function startGame() {
-        const round = createRound();
+        const round = createRound(Array.isArray(gameData?.words) ? gameData.words : WORDS);
         setSequence(round.sequence);
         setChoices(round.choices);
         setSelectedWords([]);
@@ -39,6 +40,15 @@ export function SequenceTapGame() {
         setComplete(false);
         setShowingSequence(true);
         setStarted(true);
+        completionNotified.current = false;
+    }
+
+    function finishGame() {
+        setComplete(true);
+        if (!completionNotified.current) {
+            completionNotified.current = true;
+            onComplete?.();
+        }
     }
 
     function selectWord(word) {
@@ -55,7 +65,7 @@ export function SequenceTapGame() {
         setFeedback("correct");
 
         if (nextSelectedWords.length === sequence.length) {
-            setComplete(true);
+            finishGame();
         }
     }
 
@@ -118,9 +128,11 @@ export function SequenceTapGame() {
                 <>
                     <h2>クリア！</h2>
                     <p>3つの言葉を順番どおりに選べました。</p>
-                    <button className="btn btn-primary" type="button" onClick={startGame}>
-                        もう一度遊ぶ
-                    </button>
+                    {!onComplete && (
+                        <button className="btn btn-primary" type="button" onClick={startGame}>
+                            もう一度遊ぶ
+                        </button>
+                    )}
                 </>
             )}
         </section>

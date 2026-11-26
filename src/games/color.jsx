@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const COLORS = [
     { name: "赤", value: "#dc3545" },
@@ -20,8 +20,8 @@ function shuffle(items) {
     return shuffled;
 }
 
-function createRound() {
-    return shuffle(COLORS)
+function createRound(targetColors = COLORS) {
+    return shuffle(targetColors)
         .slice(0, 3)
         .map((target) => {
             const choices = shuffle([
@@ -51,19 +51,32 @@ function ColorSwatch({ color }) {
     );
 }
 
-export function ColorMatchGame() {
+export function ColorMatchGame({ gameData, onComplete }) {
     const [started, setStarted] = useState(false);
     const [round, setRound] = useState([]);
     const [questionIndex, setQuestionIndex] = useState(0);
     const [feedback, setFeedback] = useState("");
     const [complete, setComplete] = useState(false);
+    const completionNotified = useRef(false);
 
     function startGame() {
-        setRound(createRound());
+        const generatedColors = Array.isArray(gameData?.colors)
+            ? gameData.colors.map((name) => COLORS.find((color) => color.name === name)).filter(Boolean)
+            : COLORS;
+        setRound(createRound(generatedColors.length === 3 ? generatedColors : COLORS));
         setQuestionIndex(0);
         setFeedback("");
         setComplete(false);
+        completionNotified.current = false;
         setStarted(true);
+    }
+
+    function finishGame() {
+        setComplete(true);
+        if (!completionNotified.current) {
+            completionNotified.current = true;
+            onComplete?.();
+        }
     }
 
     function selectColor(color) {
@@ -74,7 +87,7 @@ export function ColorMatchGame() {
 
     function goToNextQuestion() {
         if (questionIndex === round.length - 1) {
-            setComplete(true);
+            finishGame();
             return;
         }
 
@@ -137,9 +150,11 @@ export function ColorMatchGame() {
                 <>
                     <h2>クリア！</h2>
                     <p>3問すべてに正解しました。</p>
-                    <button className="btn btn-primary" type="button" onClick={startGame}>
-                        もう一度遊ぶ
-                    </button>
+                    {!onComplete && (
+                        <button className="btn btn-primary" type="button" onClick={startGame}>
+                            もう一度遊ぶ
+                        </button>
+                    )}
                 </>
             )}
         </section>

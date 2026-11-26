@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const QUESTIONS = [
     { id: "food", prompt: "食べ物を選んでください。", choices: ["りんご", "くつ", "傘"], answer: "りんご" },
@@ -29,19 +29,32 @@ function createRound() {
         .map((question) => ({ ...question, choices: shuffle(question.choices) }));
 }
 
-export function PickGame() {
+export function PickGame({ gameData, onComplete }) {
     const [started, setStarted] = useState(false);
     const [questions, setQuestions] = useState([]);
     const [questionIndex, setQuestionIndex] = useState(0);
     const [feedback, setFeedback] = useState("");
     const [complete, setComplete] = useState(false);
+    const completionNotified = useRef(false);
 
     function startGame() {
-        setQuestions(createRound());
+        const sourceQuestions = Array.isArray(gameData?.questions) ? gameData.questions : null;
+        setQuestions(sourceQuestions
+            ? sourceQuestions.map((question) => ({ ...question, choices: shuffle(question.choices) }))
+            : createRound());
         setQuestionIndex(0);
         setFeedback("");
         setComplete(false);
+        completionNotified.current = false;
         setStarted(true);
+    }
+
+    function finishGame() {
+        setComplete(true);
+        if (!completionNotified.current) {
+            completionNotified.current = true;
+            onComplete?.();
+        }
     }
 
     function selectChoice(choice) {
@@ -56,7 +69,7 @@ export function PickGame() {
 
     function goToNextQuestion() {
         if (questionIndex === questions.length - 1) {
-            setComplete(true);
+            finishGame();
             return;
         }
 
@@ -112,9 +125,11 @@ export function PickGame() {
                 <>
                     <h2>クリア！</h2>
                     <p>3問すべてに正解しました。</p>
-                    <button className="btn btn-primary" type="button" onClick={startGame}>
-                        もう一度遊ぶ
-                    </button>
+                    {!onComplete && (
+                        <button className="btn btn-primary" type="button" onClick={startGame}>
+                            もう一度遊ぶ
+                        </button>
+                    )}
                 </>
             )}
         </section>

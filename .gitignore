@@ -25,3 +25,4 @@ bot/*
 *.sln
 *.sw?
 .vercel
+.env*
