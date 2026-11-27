@@ -40,7 +40,7 @@
 }
 
 .registration-form button,
-.check-in-button {
+.primary-button {
   min-height: 46px;
   padding: 10px 16px;
   border: 0;
@@ -53,12 +53,27 @@
 }
 
 .registration-form button:disabled,
-.check-in-button:disabled {
+.primary-button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
 
-.check-in-button {
-  width: 100%;
-  margin-top: 16px;
+.game-launcher {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid #d8dee8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(33 48 71 / 8%);
+}
+
+.game-launcher h2,
+.game-launcher p {
+  margin: 0;
+}
+
+.dev-game-button {
+  justify-self: center;
 }

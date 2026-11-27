@@ -89,7 +89,7 @@ function GuardianLink() {
     initialize();
   }, [linkToken]);
 
- 
+
   // 連携を承認する
   async function handleConfirm() {
     if (!profile || !inviter) return;

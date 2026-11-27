@@ -3,16 +3,26 @@ import liff from "@line/liff";
 import { supabase } from "../supabaseClient";
 import "./RegistrationForm.css";
 
-export default function HomeScreen({ user, onEditProfile }) {
+export default function HomeScreen({
+  user,
+  onEditProfile,
+  onStartGame,
+  onGenerateTestGame,
+  isGeneratingGame,
+  isCheckingIn,
+  activeGame,
+  game,
+  error,
+  message,
+  onRetryCheckIn,
+}) {
   const isGuardian = user?.roles?.includes("guardian");
   const isSenior = !isGuardian; // デフォルトは高齢者側
 
   const [lastCheckIn, setLastCheckIn] = useState(null);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [seniorsList, setSeniorsList] = useState([]);
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
     if (!user?.line_user_id) return;
@@ -34,30 +44,6 @@ export default function HomeScreen({ user, onEditProfile }) {
       .maybeSingle();
 
     if (data) setLastCheckIn(data.created_at);
-  }
-
-  // 【高齢者用】チェックイン記録
-  async function handleCheckIn() {
-    if (isCheckingIn) return;
-    setIsCheckingIn(true);
-    setStatusMessage("");
-
-    const { data, error } = await supabase
-      .from("check_ins")
-      .insert({
-        line_user_id: user.line_user_id,
-        display_name: user.name,
-      })
-      .select("created_at")
-      .single();
-
-    if (error) {
-      alert("チェックインに失敗しました：" + error.message);
-    } else {
-      setLastCheckIn(data.created_at);
-      setStatusMessage("今日のチェックインを記録しました！");
-    }
-    setIsCheckingIn(false);
   }
 
   // 【保護者用】見守り対象（高齢者）の最新状況を取得
@@ -159,6 +145,9 @@ export default function HomeScreen({ user, onEditProfile }) {
         <p className="registration-subtitle">ホーム画面</p>
         <div className="flourish">〜 ✳ 〜</div>
 
+        {message && <p role="status" className="registration-note">{message}</p>}
+        {error && <p role="alert" className="registration-note">{error}</p>}
+
         {/* ユーザー情報ヘッダー */}
         <section className="registration-section hand-drawn">
           <h2>☆ {user.name} さん</h2>
@@ -175,25 +164,48 @@ export default function HomeScreen({ user, onEditProfile }) {
           </button>
         </section>
 
-        {statusMessage && (
-          <p className="registration-note" style={{ fontWeight: "bold", color: "#2e7d32" }}>
-            {statusMessage}
-          </p>
-        )}
-
         {/* 高齢者向け：チェックインボタン */}
-        {isSenior && (
+        {isSenior && !activeGame && (
           <section className="registration-section hand-drawn">
             <h2>☆ 今日のチェックイン</h2>
             <p>最終チェックイン：{formatDate(lastCheckIn)}</p>
             <button
               type="button"
               className="primary-button"
-              onClick={handleCheckIn}
-              disabled={isCheckingIn}
+              onClick={onStartGame}
+              disabled={isGeneratingGame}
             >
-              {isCheckingIn ? "記録中..." : "今日も元気です！（チェックイン）"}
+              {isGeneratingGame ? "準備中..." : "今日も元気です！（チェックイン）"}
             </button>
+            {import.meta.env.DEV && (
+              <details className="home-screen-dev-menu">
+                <summary>開発用メニュー</summary>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={onGenerateTestGame}
+                  disabled={isGeneratingGame}
+                >
+                  テスト用に新しいAIゲームを生成
+                </button>
+              </details>
+            )}
+          </section>
+        )}
+
+        {isSenior && activeGame && (
+          <section className="registration-section hand-drawn" aria-label={activeGame.source === "ai" ? "AIゲーム" : "ローカルゲーム"}>
+            {game}
+            {error && (
+              <button
+                type="button"
+                className="primary-button"
+                onClick={onRetryCheckIn}
+                disabled={isCheckingIn}
+              >
+                {isCheckingIn ? "記録中..." : "チェックインを再試行"}
+              </button>
+            )}
           </section>
         )}
 
