@@ -6,6 +6,9 @@ import { DailyPromptGame } from "./games/daily";
 import { PickGame } from "./games/pick";
 import { SequenceTapGame } from "./games/sequence";
 import { WordMatchGame } from "./games/wordmatch";
+import { Completion } from "./Completion";
+import { HomeScreen } from "./HomeScreen";
+import RegistrationForm from "./components/RegistrationForm";
 import { chooseLocalGameType, requestDailyGame } from "./services/gameGenerator";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.css";
@@ -15,10 +18,10 @@ function App() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
   const [isGeneratingGame, setIsGeneratingGame] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [activeGame, setActiveGame] = useState(null);
+  const [userRecord, setUserRecord] = useState(null);
   const [isCompletionPage, setIsCompletionPage] = useState(
     () => window.location.pathname === "/complete"
   );
@@ -52,16 +55,18 @@ function App() {
 
         const { data: registeredUser, error: lookupError } = await supabase
           .from("users")
-          .select("line_user_id, name")
+          .select("*")
           .eq("line_user_id", lineProfile.userId)
           .maybeSingle();
 
         if (lookupError) throw lookupError;
         if (cancelled) return;
 
-        setIsRegistered(Boolean(registeredUser));
+        setUserRecord(registeredUser);
+        const registrationComplete = Boolean(registeredUser?.prefecture && registeredUser?.city);
+        setIsRegistered(registrationComplete);
         setMessage(
-          registeredUser
+          registrationComplete
             ? `登録済みです: ${registeredUser.name}`
             : "LINE profile loaded. Confirm the details and register."
         );
@@ -79,68 +84,58 @@ function App() {
     };
   }, [isCompletionPage]);
 
-  async function registerUser(event) {
-    event.preventDefault();
-    if (!profile || isRegistering) return;
-
-    setError("");
-    setIsRegistering(true);
-    setMessage("Registering user...");
-
-    try {
-      const { data: savedUser, error: userError } = await supabase
-        .from("users")
-        .upsert(
-          {
-            line_user_id: profile.userId,
-            name: profile.displayName,
-          },
-          { onConflict: "line_user_id" }
-        )
-        .select("line_user_id, name, created_at")
-        .single();
-
-      if (userError) throw userError;
-      if (savedUser?.line_user_id !== profile.userId) {
-        throw new Error("Supabase did not return the saved user row.");
-      }
-
-      setIsRegistered(true);
-      setMessage(`Supabase に仮登録しました: ${savedUser.name}`);
-    } catch (e) {
-      console.error("Failed to register the LINE profile in Supabase:", e);
-      const detail = [e?.message, e?.code && `code: ${e.code}`, e?.details, e?.hint]
-        .filter(Boolean)
-        .join(" — ");
-      setMessage("仮登録に失敗しました。");
-      setError(detail || String(e));
-    } finally {
-      setIsRegistering(false);
-    }
-  }
-
   async function startGame({ fresh = false } = {}) {
     if (!profile || !isRegistered || isGeneratingGame) return;
 
     setError("");
-    setMessage(fresh ? "テスト用のゲームを生成しています..." : "今日のゲームを準備しています...");
+    setMessage(fresh ? "テスト用のゲームを生成しています..." : "チェックイン状況を確認しています...");
     setIsGeneratingGame(true);
+    let checkingEligibility = !fresh;
 
     try {
+      if (!fresh) {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentCheckIn, error: checkInLookupError } = await supabase
+          .from("check_ins")
+          .select("created_at")
+          .eq("line_user_id", profile.userId)
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (checkInLookupError) throw checkInLookupError;
+        if (recentCheckIn) {
+          window.history.pushState({}, "", "/complete");
+          setIsCompletionPage(true);
+          return;
+        }
+        checkingEligibility = false;
+      }
+
+      setMessage(fresh ? "テスト用のゲームを生成しています..." : "今日のゲームを準備しています...");
       const game = await requestDailyGame({ idToken: liff.getIDToken(), fresh });
       setActiveGame({
         gameType: game.gameType,
         gameData: game,
         source: "ai",
+        isTest: fresh,
         checkInId: crypto.randomUUID(),
       });
       setMessage(fresh ? "テスト用のAIゲームです。" : "今日のゲームです。");
     } catch (e) {
+      if (checkingEligibility) {
+        setMessage("チェックイン状況を確認できませんでした。");
+        setError(e?.message || String(e));
+        return;
+      }
+
       console.error("Failed to generate a game; starting a local game:", e);
       setActiveGame({
         gameType: chooseLocalGameType(),
         gameData: null,
         source: "local",
+        isTest: fresh,
         checkInId: crypto.randomUUID(),
       });
       setMessage("AIに接続できなかったため、ローカルゲームを始めます。");
@@ -152,19 +147,32 @@ function App() {
   async function saveCheckIn() {
     if (!profile || !isRegistered || !activeGame || checkInLock.current) return;
 
+    if (activeGame.isTest) {
+      window.history.pushState({}, "", "/complete?test=1");
+      setIsCompletionPage(true);
+      return;
+    }
+
     checkInLock.current = true;
     setIsCheckingIn(true);
     setError("");
     setMessage("チェックインを記録しています...");
 
     try {
-      const { error: checkInError } = await supabase.from("check_ins").insert({
-        id: activeGame.checkInId,
-        line_user_id: profile.userId,
-        display_name: profile.displayName,
-      });
+      const { data: savedCheckIn, error: checkInError } = await supabase
+        .from("check_ins")
+        .insert({
+          id: activeGame.checkInId,
+          line_user_id: profile.userId,
+          display_name: profile.displayName,
+        })
+        .select("id, line_user_id, created_at")
+        .maybeSingle();
 
       if (checkInError && checkInError.code !== "23505") throw checkInError;
+      if (!savedCheckIn && checkInError?.code !== "23505") {
+        throw new Error("Supabase did not return the saved check-in row.");
+      }
 
       window.history.pushState({}, "", "/complete");
       setIsCompletionPage(true);
@@ -198,80 +206,47 @@ function App() {
     }
   }
 
-  if (isCompletionPage) return null;
+  if (isCompletionPage) {
+    return <Completion isTest={new URLSearchParams(window.location.search).get("test") === "1"} />;
+  }
+
+  if (profile && isRegistered) {
+    return (
+      <HomeScreen
+        profile={profile}
+        userName={userRecord?.name || profile.displayName}
+        message={message}
+        error={error}
+        isGeneratingGame={isGeneratingGame}
+        isCheckingIn={isCheckingIn}
+        activeGame={activeGame}
+        onStartGame={() => startGame()}
+        onGenerateTestGame={() => startGame({ fresh: true })}
+        onRetryCheckIn={saveCheckIn}
+        game={renderActiveGame()}
+      />
+    );
+  }
+
+  if (profile && !isRegistered) {
+    return (
+      <RegistrationForm
+        profile={profile}
+        initialUser={userRecord}
+        onComplete={(savedUser) => {
+          setUserRecord(savedUser);
+          setIsRegistered(true);
+          setMessage("登録内容を保存しました。");
+          setError("");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="App">
-      <h1>LINE 仮登録</h1>
-
       {message && <p role="status">{message}</p>}
       {error && <p role="alert"><code>{error}</code></p>}
-
-      {profile && !isRegistered && (
-        <form className="registration-form" onSubmit={registerUser}>
-          <div className="registration-field">
-            <label htmlFor="line-user-id">LINE user ID</label>
-            <input id="line-user-id" type="text" value={profile.userId} readOnly />
-          </div>
-
-          <div className="registration-field">
-            <label htmlFor="line-display-name">LINE ニックネーム</label>
-            <input
-              id="line-display-name"
-              type="text"
-              value={profile.displayName}
-              readOnly
-            />
-          </div>
-
-          <button type="submit" disabled={isRegistering}>
-            {isRegistering ? "登録中..." : "仮登録する"}
-          </button>
-        </form>
-      )}
-
-      {profile && isRegistered && !activeGame && (
-        <section className="game-launcher" aria-labelledby="daily-game-title">
-          <h2 id="daily-game-title">今日のゲーム</h2>
-          <p>ゲームをクリアするとチェックインが記録されます。</p>
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => startGame()}
-            disabled={isGeneratingGame}
-          >
-            {isGeneratingGame ? "準備中..." : "今日も元気です！（チェックイン）"}
-          </button>
-          {import.meta.env.DEV && (
-            <button
-              className="btn btn-outline-secondary dev-game-button"
-              type="button"
-              onClick={() => startGame({ fresh: true })}
-              disabled={isGeneratingGame}
-            >
-              テスト用に新しいAIゲームを生成
-            </button>
-          )}
-        </section>
-      )}
-
-      {activeGame && (
-        <section aria-label={activeGame.source === "ai" ? "AIゲーム" : "ローカルゲーム"}>
-          {renderActiveGame()}
-          {error && (
-            <button
-              className="primary-button"
-              type="button"
-              onClick={saveCheckIn}
-              disabled={isCheckingIn}
-            >
-              {isCheckingIn
-                ? "記録中..."
-                : "チェックインを再試行"}
-            </button>
-          )}
-        </section>
-      )}
     </div>
   );
 }

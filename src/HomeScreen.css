@@ -1,0 +1,160 @@
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap");
+
+.home-screen {
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: #fff8f3;
+  color: #4b5148;
+  font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
+  line-height: 1.8;
+}
+
+.home-screen,
+.home-screen * {
+  box-sizing: border-box;
+}
+
+.home-screen__card {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 36px clamp(20px, 6vw, 56px);
+  border: 2px solid #d9dfcf;
+  border-radius: 24px 20px 26px 22px;
+  background: #fffefa;
+  box-shadow: 0 5px 0 #e9e8dc;
+  text-align: center;
+}
+
+.home-screen__eyebrow {
+  margin: 0 0 8px;
+  color: #819477;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.home-screen__title {
+  margin: 0;
+  color: #435b49;
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 800;
+}
+
+.home-screen__flourish,
+.home-screen__flower {
+  color: #819477;
+  letter-spacing: 0.2em;
+}
+
+.home-screen__flourish {
+  margin: 10px 0 20px;
+}
+
+.home-screen__section {
+  position: relative;
+  margin: 22px 0;
+  padding: 22px 20px;
+  border: 1.5px solid #d9dfcf;
+  border-radius: 17px 12px 20px 13px / 13px 19px 12px 18px;
+  text-align: left;
+}
+
+.home-screen__section h2 {
+  margin: 0 0 8px;
+  color: #435b49;
+  font-size: 17px;
+}
+
+.home-screen__section p {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.home-screen__detail {
+  color: #85877d;
+  font-size: 12px !important;
+}
+
+.home-screen__status,
+.home-screen__error {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f2f5eb;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.home-screen__error {
+  background: #fff0e9;
+  color: #984f38;
+}
+
+.home-screen__button {
+  display: block;
+  width: min(100%, 340px);
+  min-height: 48px;
+  margin: 14px auto 0;
+  padding: 12px 20px;
+  border: 1px solid #435b49;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.home-screen__button--primary {
+  background: #435b49;
+  color: #fff;
+}
+
+.home-screen__button--secondary {
+  background: transparent;
+  color: #435b49;
+}
+
+.home-screen__button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.home-screen__button--primary:hover:not(:disabled) {
+  background: #354e3b;
+}
+
+.home-screen__button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.home-screen__dev-tools {
+  margin-top: 22px;
+  color: #85877d;
+  font-size: 12px;
+  text-align: center;
+}
+
+.home-screen__dev-tools summary {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.home-screen__flower {
+  margin-top: 24px;
+  font-size: 28px;
+}
+
+@media (max-width: 520px) {
+  .home-screen {
+    padding: 18px 12px;
+  }
+
+  .home-screen__card {
+    padding: 28px 16px;
+  }
+
+  .home-screen__section {
+    padding: 18px 14px;
+  }
+}

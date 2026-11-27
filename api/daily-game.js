@@ -143,7 +143,7 @@ async function generateGame() {
   const model = "gpt-6-luna";
   if (!apiKey || !model) throw new Error("OpenAI server configuration is missing.");
 
-  const response = await fetch("https://api.openai.iniad.org/api/v1", {
+  const response = await fetch("https://api.openai.iniad.org/api/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
