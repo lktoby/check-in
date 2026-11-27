@@ -1,0 +1,171 @@
+
+.guardian-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 32px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff8f3;
+  color: #4b5148;
+  font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.guardian-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  padding: 32px 26px;
+  background: #fffefa;
+  border: 2px solid #d9dfcf;
+  border-radius: 26px 22px 28px 20px;
+  box-shadow: 0 5px 0 #e9e8dc;
+  text-align: center;
+}
+
+.guardian-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #e3efdf;
+  color: #53805c;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.guardian-subtitle {
+  margin: 0 0 8px;
+  color: #819477;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.guardian-card h1 {
+  margin: 0 0 16px;
+  color: #435b49;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.guardian-description {
+  margin: 0 0 24px;
+  font-size: 15px;
+}
+
+.guardian-info {
+  padding: 18px;
+  margin-bottom: 22px;
+  border-radius: 16px;
+  background: #f2f5eb;
+  text-align: left;
+}
+
+.guardian-info-title {
+  margin: 0 0 8px;
+  font-weight: 800;
+  color: #526d50;
+}
+
+.guardian-info-title span {
+  margin-right: 6px;
+}
+
+.guardian-info p:last-child {
+  margin-bottom: 0;
+  font-size: 14px;
+}
+
+.guardian-person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 10px;
+  border: 1px solid #e7e4d8;
+  border-radius: 16px;
+  text-align: left;
+}
+
+.guardian-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f9e9df;
+  color: #a36d50;
+  font-size: 25px;
+}
+
+.guardian-label {
+  margin: 0;
+  color: #85877d;
+  font-size: 13px;
+}
+
+.guardian-person-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.guardian-note {
+  margin: 10px 0 20px;
+  color: #85877d;
+  font-size: 12px;
+  text-align: left;
+}
+
+.guardian-warning {
+  padding: 12px;
+  margin: 16px 0;
+  border-radius: 12px;
+  background: #fff0e9;
+  color: #984f38;
+  font-size: 13px;
+  text-align: left;
+}
+
+.guardian-button {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 15px;
+  background: #66866a;
+  color: white;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.guardian-button:disabled {
+  background: #c4c9bd;
+  cursor: not-allowed;
+}
+
+.guardian-footer {
+  margin: 22px 0 0;
+  color: #87947e;
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .guardian-card {
+    padding: 26px 18px;
+  }
+
+  .guardian-card h1 {
+    font-size: 22px;
+  }
+}

@@ -7,25 +7,30 @@ import { PickGame } from "./games/pick";
 import { SequenceTapGame } from "./games/sequence";
 import { WordMatchGame } from "./games/wordmatch";
 import { Completion } from "./Completion";
-import { HomeScreen } from "./HomeScreen";
+import HomeScreen from "./components/HomeScreen";
 import RegistrationForm from "./components/RegistrationForm";
+import GuardianLink from "./components/GuardianLink";
 import { chooseLocalGameType, requestDailyGame } from "./services/gameGenerator";
 import "./App.css";
+import "./base.css";
 import "bootstrap/dist/css/bootstrap.css";
 
 function App() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+  const [userRecord, setUserRecord] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingGame, setIsGeneratingGame] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [activeGame, setActiveGame] = useState(null);
-  const [userRecord, setUserRecord] = useState(null);
   const [isCompletionPage, setIsCompletionPage] = useState(
     () => window.location.pathname === "/complete"
   );
   const checkInLock = useRef(false);
+  const linkToken = new URLSearchParams(window.location.search).get("link");
 
   useEffect(() => {
     function updateRoute() {
@@ -36,7 +41,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isCompletionPage) return undefined;
+    if (isCompletionPage || linkToken) {
+      setLoading(false);
+      return undefined;
+    }
 
     let cancelled = false;
 
@@ -53,7 +61,7 @@ function App() {
         if (cancelled) return;
         setProfile(lineProfile);
 
-        const { data: registeredUser, error: lookupError } = await supabase
+        const { data: existingUser, error: lookupError } = await supabase
           .from("users")
           .select("*")
           .eq("line_user_id", lineProfile.userId)
@@ -62,19 +70,21 @@ function App() {
         if (lookupError) throw lookupError;
         if (cancelled) return;
 
-        setUserRecord(registeredUser);
-        const registrationComplete = Boolean(registeredUser?.prefecture && registeredUser?.city);
+        setUserRecord(existingUser);
+        const registrationComplete = Boolean(existingUser?.prefecture && existingUser?.city);
         setIsRegistered(registrationComplete);
         setMessage(
           registrationComplete
-            ? `登録済みです: ${registeredUser.name}`
-            : "LINE profile loaded. Confirm the details and register."
+            ? `登録済みです: ${existingUser.name}`
+            : "登録内容を入力してください。"
         );
       } catch (e) {
         if (cancelled) return;
-        setMessage("Initialization failed.");
+        setMessage("初期化に失敗しました。");
         console.error("Failed to initialize LIFF or load registration:", e);
         setError(e?.message || String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -82,7 +92,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [isCompletionPage]);
+  }, [isCompletionPage, linkToken]);
 
   async function startGame({ fresh = false } = {}) {
     if (!profile || !isRegistered || isGeneratingGame) return;
@@ -191,63 +201,52 @@ function App() {
     const props = { gameData: activeGame.gameData, onComplete: saveCheckIn };
 
     switch (activeGame.gameType) {
-      case "color":
-        return <ColorMatchGame {...props} />;
-      case "daily":
-        return <DailyPromptGame {...props} />;
-      case "pick":
-        return <PickGame {...props} />;
-      case "sequence":
-        return <SequenceTapGame {...props} />;
-      case "wordmatch":
-        return <WordMatchGame {...props} />;
-      default:
-        return null;
+      case "color": return <ColorMatchGame {...props} />;
+      case "daily": return <DailyPromptGame {...props} />;
+      case "pick": return <PickGame {...props} />;
+      case "sequence": return <SequenceTapGame {...props} />;
+      case "wordmatch": return <WordMatchGame {...props} />;
+      default: return null;
     }
   }
 
   if (isCompletionPage) {
     return <Completion isTest={new URLSearchParams(window.location.search).get("test") === "1"} />;
   }
+  if (linkToken) return <GuardianLink />;
+  if (loading) return <div className="App"><p>読み込み中...</p></div>;
+  if (error && !profile) return <div className="App"><p role="alert">{error}</p></div>;
 
-  if (profile && isRegistered) {
+  if (userRecord && isRegistered && !isEditing) {
     return (
       <HomeScreen
-        profile={profile}
-        userName={userRecord?.name || profile.displayName}
-        message={message}
-        error={error}
+        user={userRecord}
+        onEditProfile={() => setIsEditing(true)}
+        onStartGame={() => startGame()}
+        onGenerateTestGame={() => startGame({ fresh: true })}
         isGeneratingGame={isGeneratingGame}
         isCheckingIn={isCheckingIn}
         activeGame={activeGame}
-        onStartGame={() => startGame()}
-        onGenerateTestGame={() => startGame({ fresh: true })}
-        onRetryCheckIn={saveCheckIn}
         game={renderActiveGame()}
-      />
-    );
-  }
-
-  if (profile && !isRegistered) {
-    return (
-      <RegistrationForm
-        profile={profile}
-        initialUser={userRecord}
-        onComplete={(savedUser) => {
-          setUserRecord(savedUser);
-          setIsRegistered(true);
-          setMessage("登録内容を保存しました。");
-          setError("");
-        }}
+        error={error}
+        message={message}
+        onRetryCheckIn={saveCheckIn}
       />
     );
   }
 
   return (
-    <div className="App">
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert"><code>{error}</code></p>}
-    </div>
+    <RegistrationForm
+      profile={profile}
+      initialUser={userRecord}
+      onComplete={(savedUser) => {
+        setUserRecord(savedUser);
+        setIsRegistered(true);
+        setIsEditing(false);
+        setMessage("登録内容を保存しました。");
+        setError("");
+      }}
+    />
   );
 }
 
